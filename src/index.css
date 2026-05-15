@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .perspective {
+    perspective: 500px;
+  }
+}
+
+/* Custom flip animation for letter reveal */
+@keyframes flip-in {
+  0% { transform: rotateX(0deg); }
+  50% { transform: rotateX(-90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+.flip-animate {
+  animation: flip-in 0.5s ease-in-out forwards;
+}
+
+/* Ensure smooth color transitions after flip */
+.letter-cell {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
