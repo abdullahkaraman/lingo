@@ -66,6 +66,7 @@ async function main() {
   const tdkLines = tdkText.split('\n').map((l) => l.trim()).filter(Boolean)
   console.log(`TDK raw entries: ${tdkLines.length.toLocaleString()}`)
 
+  // result[len] is an array of [word, count] pairs
   const result = { 4: [], 5: [], 6: [], 7: [] }
 
   for (const line of tdkLines) {
@@ -81,26 +82,31 @@ async function main() {
     // Keep only pure Turkish-alphabet words.
     if (!isPureTurkish(word)) continue
 
+    const count = freqMap.get(word) ?? 0
+
     // Frequency filter — remove archaic / rare words.
-    if ((freqMap.get(word) ?? 0) < FREQ_MIN) continue
+    if (count < FREQ_MIN) continue
 
     const len = [...word].length
     if (len >= 4 && len <= 7) {
-      result[len].push(word)
+      result[len].push([word, count])
     }
   }
 
-  // Deduplicate each bucket.
+  // Deduplicate (by word) and sort by word for each bucket.
   for (const len of [4, 5, 6, 7]) {
-    result[len] = [...new Set(result[len])].sort()
+    const seen = new Set()
+    result[len] = result[len]
+      .filter(([w]) => { if (seen.has(w)) return false; seen.add(w); return true })
+      .sort(([a], [b]) => a.localeCompare(b, 'tr'))
   }
 
   const outPath = join(__dir, '../src/data/tdk-words.json')
-  writeFileSync(outPath, JSON.stringify(result, null, 2), 'utf8')
+  writeFileSync(outPath, JSON.stringify(result), 'utf8')
 
   console.log()
   for (const len of [4, 5, 6, 7]) {
-    const sample = result[len].slice(0, 5).join(', ')
+    const sample = result[len].slice(0, 5).map(([w]) => w).join(', ')
     console.log(`  ${len}-letter: ${result[len].length} words  (e.g. ${sample})`)
   }
   console.log(`\nSaved → ${outPath}`)

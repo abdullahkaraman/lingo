@@ -31,9 +31,16 @@ function buildBlankRow(length: number): GuessRow {
 }
 
 function pickLocalWord(wordLength: WordLength): string {
-  const list = (WORD_LISTS[wordLength] ?? []).filter((w) => [...w].length === wordLength)
-  const word = list[Math.floor(Math.random() * list.length)]
-  return word.toLocaleUpperCase('tr-TR')
+  const list = (WORD_LISTS[wordLength] ?? []).filter(([w]) => [...w].length === wordLength)
+  // Weight by sqrt(count) — favours common words without extreme skew from raw counts
+  let total = 0
+  const weights = list.map(([, count]) => { const w = Math.sqrt(count); total += w; return w })
+  let r = Math.random() * total
+  for (let i = 0; i < list.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return list[i][0].toLocaleUpperCase('tr-TR')
+  }
+  return list[list.length - 1][0].toLocaleUpperCase('tr-TR')
 }
 
 function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {

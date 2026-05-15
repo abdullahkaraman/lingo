@@ -2,10 +2,5 @@
 // Run `node scripts/fetch-words.mjs` to refresh from the TDK word list.
 import tdkWords from './tdk-words.json'
 
-export const WORD_LISTS: Record<number, string[]> = tdkWords as Record<number, string[]>
-
-export function getRandomWord(length: number): string {
-  const list = (WORD_LISTS[length] ?? []) as string[]
-  const word = list[Math.floor(Math.random() * list.length)]
-  return word.toLocaleUpperCase('tr-TR')
-}
+// Each entry is [word, corpusCount]
+export const WORD_LISTS: Record<number, [string, number][]> = tdkWords as unknown as Record<number, [string, number][]>
