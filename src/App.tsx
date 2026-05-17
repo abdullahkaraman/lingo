@@ -17,7 +17,7 @@ export default function App() {
     phase, failReason, score, roundScore, errorMessage,
     timeLeft, isFlashingRed, wordsPlayed, wordsGuessed,
     isValidating,
-    typeChar, deleteLast, submitGuess, clearError,
+    typeChar, deleteLast, clearInput, submitGuess, clearError,
     tickTimer, startNewWord, setWordLength, resetGame,
   } = useGame()
 
@@ -31,6 +31,13 @@ export default function App() {
 
   const speechSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+
+  // ── Stamp build version into URL so local and phone can be compared ──────
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('v', __APP_VERSION__)
+    history.replaceState(null, '', url.toString())
+  }, [])
 
   // ── Word length selection ─────────────────────────────────────────────────
   function handleSelectLength(len: WordLength) {
@@ -72,24 +79,16 @@ export default function App() {
     }
   }, [view, phase])
 
-  // ── Keep active row visible above the native keyboard ────────────────────
+  // ── Scroll active row into view after each guess ─────────────────────────
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-
-    function scrollActiveRowIntoView() {
-      const el = document.querySelector<HTMLElement>('[data-active-row="true"]')
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      // Scroll only when the row is hidden below the visible viewport
-      if (rect.bottom > vv!.height || rect.top < 0) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-    }
-
-    vv.addEventListener('resize', scrollActiveRowIntoView)
-    return () => vv.removeEventListener('resize', scrollActiveRowIntoView)
-  }, [])
+    if (view !== 'game' || phase !== 'playing') return
+    // Delay matches the flip animation so the row is settled before scrolling
+    const t = setTimeout(() => {
+      document.querySelector<HTMLElement>('[data-active-row="true"]')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 350)
+    return () => clearTimeout(t)
+  }, [currentGuessIndex, view, phase])
 
   // ── Physical keyboard (desktop) ───────────────────────────────────────────
   useEffect(() => {
@@ -297,10 +296,10 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen text-white flex flex-col items-center"
+      className="fixed inset-0 overflow-hidden text-white flex flex-col items-center"
       style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #09090b 60%)' }}
     >
-      <div className="w-full max-w-lg flex flex-col items-center min-h-screen px-3">
+      <div className="w-full max-w-lg h-full flex flex-col items-center px-3">
         <GameHeader onRestart={view === 'game' ? handleRestart : null} />
 
         {view === 'setup' ? (
@@ -308,7 +307,7 @@ export default function App() {
         ) : (
           /* Tapping anywhere on the game area re-focuses the hidden input */
           <div
-            className="w-full flex flex-col items-center flex-1"
+            className="w-full flex flex-col items-center flex-1 min-h-0"
             onClick={() => { if (phase === 'playing') hiddenInputRef.current?.focus() }}
           >
             {/* Hidden input for native mobile keyboard */}
@@ -325,7 +324,7 @@ export default function App() {
                 enterKeyHint="go"
                 // font-size ≥ 16px prevents iOS from zooming on focus
                 style={{
-                  position: 'fixed', top: '-100px', left: 0,
+                  position: 'fixed', top: '50%', left: '-9999px',
                   width: '1px', height: '1px', opacity: 0,
                   fontSize: '16px',
                 }}
@@ -356,7 +355,7 @@ export default function App() {
 
             {/* Game board */}
             <div
-              className="w-full flex-1 flex items-start justify-center mb-3 relative"
+              className="w-full flex-1 flex items-start justify-center mb-3 relative min-h-0"
               style={{ maxWidth: `${wordLength * 70}px` }}
             >
               <GameBoard
@@ -370,7 +369,7 @@ export default function App() {
 
             {/* Mobile action bar — delete / mic / submit */}
             <MobileActionBar
-              onDelete={deleteLast}
+              onDelete={clearInput}
               onMic={startVoiceInput}
               onSubmit={() => void submitGuess()}
               isListening={isListening}
@@ -400,7 +399,7 @@ export default function App() {
               )}
               <Keyboard
                 onKey={typeChar}
-                onDelete={deleteLast}
+                onDelete={clearInput}
                 onEnter={() => void submitGuess()}
                 letterStatuses={letterStatuses()}
                 isValidating={isValidating}

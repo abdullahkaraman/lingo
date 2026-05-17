@@ -56,6 +56,7 @@ interface GameStore extends GameState {
   setWordLength: (length: WordLength) => void
   typeChar: (char: string) => void
   deleteLast: () => void
+  clearInput: () => void
   submitGuess: () => Promise<void>
   clearError: () => void
   tickTimer: () => void
@@ -234,6 +235,20 @@ export const useGame = create<GameStore>((set, get) => ({
         timeLeft: TIMER_START,
       })
     }, flipDuration)
+  },
+
+  clearInput: () => {
+    const { phase, currentInput, currentGuessIndex, guesses, targetWord, isValidating } = get()
+    if (phase !== 'playing' || isValidating || currentInput.length <= 1) return
+    const updated = guesses.map((row, idx) => {
+      if (idx !== currentGuessIndex) return row
+      const letters: Letter[] = row.letters.map((_, i) => ({
+        char: i === 0 ? targetWord[0] : '',
+        status: i === 0 ? ('correct' as const) : ('empty' as const),
+      }))
+      return { ...row, letters }
+    })
+    set({ currentInput: targetWord[0], guesses: updated })
   },
 
   clearError: () => set({ errorMessage: null }),
