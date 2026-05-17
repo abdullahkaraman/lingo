@@ -30,18 +30,6 @@ Türkçe kelime tahmin oyunu. Her turda rastgele bir Türkçe kelime seçilir ve
 
 ---
 
-## Teknik Yığın
-
-| Katman | Teknoloji |
-|---|---|
-| UI | React 18 + TypeScript |
-| Stil | Tailwind CSS |
-| Durum yönetimi | Zustand |
-| Build aracı | Vite |
-| Deployment | Vercel |
-
----
-
 ## Yerel Kurulum
 
 ```bash
@@ -52,25 +40,6 @@ npm run dev
 ```
 
 Uygulama `http://localhost:5173` adresinde açılır.
-
----
-
-## Kelime Listesini Güncelleme
-
-Oyun iki ayrı kelime listesi kullanır:
-
-| Dosya | Amaç |
-|---|---|
-| `src/data/tdk-words.json` | Hedef kelime havuzu (sık kullanılan kelimeler, frekans ≥ 30) |
-| `src/data/tdk-valid.json` | Tahmin doğrulama sözlüğü (tüm TDK kelimeleri) |
-
-Her iki dosyayı aynı anda oluşturmak için:
-
-```bash
-npm run fetch-words
-```
-
-Bu komut TDK kelime listesini ve OpenSubtitles Türkçe frekans korpusunu çekerek her iki JSON dosyasını yeniden oluşturur.
 
 ---
 
