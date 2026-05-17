@@ -1,11 +1,18 @@
 /**
  * Fetches the full TDK (Türk Dil Kurumu) word list from the open-source
  * ncarkaci/TDKDictionaryCrawler repository (scraped directly from sozluk.gov.tr),
- * then cross-references with an OpenSubtitles Turkish word-frequency corpus to
- * keep only words that appear at least FREQ_MIN times in real usage.
+ * then cross-references with an OpenSubtitles Turkish word-frequency corpus.
  *
- * This removes archaic, dialectal, and highly specialised words (e.g. "keler",
- * "utçu") while retaining everyday vocabulary.
+ * Produces two files:
+ *
+ *   tdk-words.json  — game word pool (freq ≥ FREQ_MIN).
+ *                     Only common, everyday words become target words so players
+ *                     are never asked to guess something obscure.
+ *
+ *   tdk-valid.json  — validation dictionary (all TDK words, no frequency gate).
+ *                     Any word that exists in the TDK dictionary and uses only
+ *                     Turkish alphabet characters is accepted as a valid guess,
+ *                     even if it is rare (e.g. "hitap", "veciz", …).
  *
  * Usage:
  *   node scripts/fetch-words.mjs
@@ -77,8 +84,10 @@ async function main() {
   const tdkLines = tdkText.split('\n').map((l) => l.trim()).filter(Boolean)
   console.log(`TDK raw entries: ${tdkLines.length.toLocaleString()}`)
 
-  // result[len] is an array of [word, count] pairs
-  const result = { 4: [], 5: [], 6: [], 7: [] }
+  // game[len]  = [word, count] pairs for target-word pool (freq ≥ FREQ_MIN)
+  // valid[len] = word strings for validation dictionary (all TDK words)
+  const game  = { 4: [], 5: [], 6: [], 7: [] }
+  const valid = { 4: [], 5: [], 6: [], 7: [] }
 
   for (const line of tdkLines) {
     // Skip multi-word phrases, slash-separated alternates, and hyphenated forms.
@@ -93,37 +102,54 @@ async function main() {
     // Keep only pure Turkish-alphabet words.
     if (!isPureTurkish(word)) continue
 
-    const count = freqMap.get(word) ?? 0
-
-    // Frequency filter — remove archaic / rare words.
-    if (count < FREQ_MIN) continue
-
-    // Blocklist filter — remove inappropriate words.
+    // Blocklist filter — remove inappropriate words from both lists.
     if (BLOCKLIST.has(word)) continue
 
     const len = [...word].length
-    if (len >= 4 && len <= 7) {
-      result[len].push([word, count])
+    if (len < 4 || len > 7) continue
+
+    // Validation list: every TDK word that passes alphabet + blocklist checks.
+    valid[len].push(word)
+
+    // Game word pool: additionally requires minimum corpus frequency.
+    const count = freqMap.get(word) ?? 0
+    if (count >= FREQ_MIN) {
+      game[len].push([word, count])
     }
   }
 
-  // Deduplicate (by word) and sort by word for each bucket.
+  // Deduplicate and sort both buckets.
   for (const len of [4, 5, 6, 7]) {
-    const seen = new Set()
-    result[len] = result[len]
-      .filter(([w]) => { if (seen.has(w)) return false; seen.add(w); return true })
-      .sort(([a], [b]) => a.localeCompare(b, 'tr'))
+    const dedup = (arr) => {
+      const seen = new Set()
+      return arr.filter((item) => {
+        const key = Array.isArray(item) ? item[0] : item
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+    }
+    game[len]  = dedup(game[len]).sort(([a], [b]) => a.localeCompare(b, 'tr'))
+    valid[len] = dedup(valid[len]).sort((a, b) => a.localeCompare(b, 'tr'))
   }
 
-  const outPath = join(__dir, '../src/data/tdk-words.json')
-  writeFileSync(outPath, JSON.stringify(result), 'utf8')
+  const wordsPath = join(__dir, '../src/data/tdk-words.json')
+  const validPath = join(__dir, '../src/data/tdk-valid.json')
+  writeFileSync(wordsPath, JSON.stringify(game), 'utf8')
+  writeFileSync(validPath, JSON.stringify(valid), 'utf8')
 
-  console.log()
+  console.log('\n── Game word pool (tdk-words.json) ─────────────────────────')
   for (const len of [4, 5, 6, 7]) {
-    const sample = result[len].slice(0, 5).map(([w]) => w).join(', ')
-    console.log(`  ${len}-letter: ${result[len].length} words  (e.g. ${sample})`)
+    const sample = game[len].slice(0, 5).map(([w]) => w).join(', ')
+    console.log(`  ${len}-letter: ${game[len].length} words  (e.g. ${sample})`)
   }
-  console.log(`\nSaved → ${outPath}`)
+  console.log('\n── Validation dictionary (tdk-valid.json) ──────────────────')
+  for (const len of [4, 5, 6, 7]) {
+    const sample = valid[len].slice(0, 5).join(', ')
+    console.log(`  ${len}-letter: ${valid[len].length} words  (e.g. ${sample})`)
+  }
+  console.log(`\nSaved → ${wordsPath}`)
+  console.log(`Saved → ${validPath}`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

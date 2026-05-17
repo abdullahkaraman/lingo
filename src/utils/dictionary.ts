@@ -1,11 +1,10 @@
-import { WORD_LISTS } from '../data/words'
+import { VALID_WORDS } from '../data/validWords'
 
-// Build the set in uppercase (tr-TR) — the same transformation pickLocalWord uses,
-// so the encoding of i/ı/İ/I is always consistent between target words and validation.
+// All TDK words uppercased — same transform as pickLocalWord uses for target words.
 const validWordSet = new Set(
-  (Object.values(WORD_LISTS) as [string, number][][])
+  (Object.values(VALID_WORDS) as string[][])
     .flat()
-    .map(([w]) => w.toLocaleUpperCase('tr-TR')),
+    .map((w) => w.toLocaleUpperCase('tr-TR')),
 )
 
 // word arrives already uppercase-normalised (from normalize() in submitGuess)
