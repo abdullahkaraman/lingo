@@ -32,10 +32,10 @@ const TDK_URL =
 const FREQ_URL =
   'https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/tr/tr_full.txt'
 
-// Minimum number of corpus occurrences a word must have to be included.
-// Tested against known-obscure words (keler:18, utçu:0) and known-common words
-// (okul:24073, araba:49407) — 30 is a clean cut point.
-const FREQ_MIN = 30
+// Minimum number of corpus occurrences a word must have to enter the game pool.
+// 200 cuts the low-frequency tail (niche/technical/archaic words) while keeping
+// ~4 600 everyday words across the four length buckets.
+const FREQ_MIN = 200
 
 // Valid Turkish lowercase alphabet — every character in a game word must be one of these.
 const TR_ALPHA = new Set([...'abcçdefgğhıijklmnoöprsştuüvyz'])
