@@ -33,6 +33,7 @@ export function GameBoard({ guesses, currentGuessIndex, wordLength, shaking, isF
         return (
           <div
             key={rowIdx}
+            data-active-row={isActiveRow ? 'true' : undefined}
             className="flex gap-2 w-full justify-center"
             style={{ opacity: isFuture ? 0.35 : 1 }}
           >

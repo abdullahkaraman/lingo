@@ -72,6 +72,25 @@ export default function App() {
     }
   }, [view, phase])
 
+  // ── Keep active row visible above the native keyboard ────────────────────
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    function scrollActiveRowIntoView() {
+      const el = document.querySelector<HTMLElement>('[data-active-row="true"]')
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      // Scroll only when the row is hidden below the visible viewport
+      if (rect.bottom > vv!.height || rect.top < 0) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+
+    vv.addEventListener('resize', scrollActiveRowIntoView)
+    return () => vv.removeEventListener('resize', scrollActiveRowIntoView)
+  }, [])
+
   // ── Physical keyboard (desktop) ───────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

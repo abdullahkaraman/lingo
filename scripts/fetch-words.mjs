@@ -33,6 +33,17 @@ const FREQ_MIN = 30
 // Valid Turkish lowercase alphabet — every character in a game word must be one of these.
 const TR_ALPHA = new Set([...'abcçdefgğhıijklmnoöprsştuüvyz'])
 
+// Words that pass alphabet/frequency filters but are inappropriate for a family game.
+const BLOCKLIST = new Set([
+  // Turkish vulgar / offensive
+  'ibne', 'orospu', 'fahişe', 'kaltak', 'yavşak', 'gavat', 'peştemal',
+  'sikiş', 'sikme', 'sikik', 'sikim', 'siken', 'sikerim',
+  'piçlik', 'piçler', 'oçsuz',
+  'götveren', 'götoğlanı',
+  // Loanwords used as profanity or adult content
+  'porn', 'porno', 'seks', 'erotik', 'escort',
+])
+
 function isProperNoun(word) {
   return word[0] !== word[0].toLocaleLowerCase('tr-TR')
 }
@@ -86,6 +97,9 @@ async function main() {
 
     // Frequency filter — remove archaic / rare words.
     if (count < FREQ_MIN) continue
+
+    // Blocklist filter — remove inappropriate words.
+    if (BLOCKLIST.has(word)) continue
 
     const len = [...word].length
     if (len >= 4 && len <= 7) {
