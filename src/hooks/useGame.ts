@@ -201,10 +201,8 @@ export const useGame = create<GameStore>((set, get) => ({
       return
     }
 
-    // ── TDK dictionary validation (async, timer paused) ──────────────────
-    set({ isValidating: true, errorMessage: null })
-    const valid = await isValidWord(guess)
-    set({ isValidating: false })
+    // ── Local dictionary validation (offline-safe) ────────────────────────
+    const valid = isValidWord(guess)
 
     if (!valid) {
       const markedAbsent = guesses.map((row, idx) =>
@@ -283,9 +281,8 @@ export const useGame = create<GameStore>((set, get) => ({
   clearError: () => set({ errorMessage: null }),
 
   tickTimer: () => {
-    const { timeLeft, phase, isValidating } = get()
-    // Pause timer while TDK validation is in flight so the player isn't penalised.
-    if (phase !== 'playing' || isValidating) return
+    const { timeLeft, phase } = get()
+    if (phase !== 'playing') return
     if (timeLeft <= 1) {
       set({ isFlashingRed: true, timeLeft: 0 })
       setTimeout(() => {
