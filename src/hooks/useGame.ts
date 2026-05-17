@@ -30,17 +30,46 @@ function buildBlankRow(length: number): GuessRow {
   }
 }
 
+// ── Per-device word history ──────────────────────────────────────────────────
+
+const usedKey = (len: WordLength) => `lingo_used_${len}`
+
+function loadUsed(len: WordLength): Set<string> {
+  try {
+    const raw = localStorage.getItem(usedKey(len))
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch { return new Set() }
+}
+
+function markUsed(len: WordLength, word: string): void {
+  try {
+    const used = loadUsed(len)
+    used.add(word)
+    localStorage.setItem(usedKey(len), JSON.stringify([...used]))
+  } catch {}
+}
+
 function pickLocalWord(wordLength: WordLength): string {
-  const list = (WORD_LISTS[wordLength] ?? []).filter(([w]) => [...w].length === wordLength)
+  const used = loadUsed(wordLength)
+  let candidates = (WORD_LISTS[wordLength] ?? []).filter(
+    ([w]) => [...w].length === wordLength && !used.has(w.toLocaleUpperCase('tr-TR')),
+  )
+
+  // All words for this length exhausted — reset and start the cycle over
+  if (candidates.length === 0) {
+    localStorage.removeItem(usedKey(wordLength))
+    candidates = (WORD_LISTS[wordLength] ?? []).filter(([w]) => [...w].length === wordLength)
+  }
+
   // Weight by sqrt(count) — favours common words without extreme skew from raw counts
   let total = 0
-  const weights = list.map(([, count]) => { const w = Math.sqrt(count); total += w; return w })
+  const weights = candidates.map(([, count]) => { const w = Math.sqrt(count); total += w; return w })
   let r = Math.random() * total
-  for (let i = 0; i < list.length; i++) {
+  for (let i = 0; i < candidates.length; i++) {
     r -= weights[i]
-    if (r <= 0) return list[i][0].toLocaleUpperCase('tr-TR')
+    if (r <= 0) return candidates[i][0].toLocaleUpperCase('tr-TR')
   }
-  return list[list.length - 1][0].toLocaleUpperCase('tr-TR')
+  return candidates[candidates.length - 1][0].toLocaleUpperCase('tr-TR')
 }
 
 function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
@@ -83,9 +112,8 @@ export const useGame = create<GameStore>((set, get) => ({
   startNewWord: () => {
     const { wordLength, wordsPlayed } = get()
 
-    // Pick a random word from the local TDK word list.
-    // (The word-of-the-day API returned the same word every round for matching lengths.)
     const targetWord = pickLocalWord(wordLength)
+    markUsed(wordLength, targetWord)
 
     const firstLetter = targetWord[0]
     set({
