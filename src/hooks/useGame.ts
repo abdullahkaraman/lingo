@@ -9,7 +9,7 @@ const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 
 export const MAX_ATTEMPTS = 5
 
-const TIMER_START = 12
+const TIMER_DEFAULT = 12
 
 // ── Row builders ────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRo
 
 interface GameStore extends GameState {
   startNewWord: () => void
-  setWordLength: (length: WordLength) => void
+  setWordLength: (length: WordLength, timerMax?: number) => void
   typeChar: (char: string) => void
   deleteLast: () => void
   clearInput: () => void
@@ -102,7 +102,8 @@ export const useGame = create<GameStore>((set, get) => ({
   score: 0,
   roundScore: 0,
   errorMessage: null,
-  timeLeft: TIMER_START,
+  timerMax: TIMER_DEFAULT,
+  timeLeft: TIMER_DEFAULT,
   failReason: null,
   isFlashingRed: false,
   wordsPlayed: 0,
@@ -110,7 +111,7 @@ export const useGame = create<GameStore>((set, get) => ({
   isValidating: false,
 
   startNewWord: () => {
-    const { wordLength, wordsPlayed } = get()
+    const { wordLength, wordsPlayed, timerMax } = get()
 
     const targetWord = pickLocalWord(wordLength)
     markUsed(wordLength, targetWord)
@@ -124,7 +125,7 @@ export const useGame = create<GameStore>((set, get) => ({
       phase: 'playing',
       roundScore: 0,
       errorMessage: null,
-      timeLeft: TIMER_START,
+      timeLeft: timerMax,
       failReason: null,
       isFlashingRed: false,
       isValidating: false,
@@ -132,8 +133,8 @@ export const useGame = create<GameStore>((set, get) => ({
     })
   },
 
-  setWordLength: (length: WordLength) => {
-    set({ wordLength: length })
+  setWordLength: (length: WordLength, timerMax = TIMER_DEFAULT) => {
+    set({ wordLength: length, timerMax })
     get().startNewWord()
   },
 
@@ -260,7 +261,7 @@ export const useGame = create<GameStore>((set, get) => ({
         guesses: nextGuesses,
         currentGuessIndex: nextIdx,
         currentInput: t[0],
-        timeLeft: TIMER_START,
+        timeLeft: get().timerMax,
       })
     }, flipDuration)
   },

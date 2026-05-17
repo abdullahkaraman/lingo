@@ -15,7 +15,7 @@ export default function App() {
   const {
     guesses, currentGuessIndex, wordLength, targetWord,
     phase, failReason, score, roundScore, errorMessage,
-    timeLeft, isFlashingRed, wordsPlayed, wordsGuessed,
+    timerMax, timeLeft, isFlashingRed, wordsPlayed, wordsGuessed,
     isValidating,
     typeChar, deleteLast, clearInput, submitGuess, clearError,
     tickTimer, startNewWord, setWordLength, resetGame,
@@ -40,8 +40,8 @@ export default function App() {
   }, [])
 
   // ── Word length selection ─────────────────────────────────────────────────
-  function handleSelectLength(len: WordLength) {
-    setWordLength(len)
+  function handleSelectLength(len: WordLength, timerSeconds: number) {
+    setWordLength(len, timerSeconds)
     setView('game')
   }
 
@@ -336,6 +336,7 @@ export default function App() {
                 score={score}
                 remainingAttempts={remainingAttempts}
                 totalAttempts={MAX_ATTEMPTS}
+                timerMax={timerMax}
                 timeLeft={timeLeft}
                 wordsPlayed={wordsPlayed}
                 wordsGuessed={wordsGuessed}

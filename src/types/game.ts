@@ -27,6 +27,7 @@ export interface GameState {
   score: number
   roundScore: number
   errorMessage: string | null
+  timerMax: number
   timeLeft: number
   failReason: FailReason
   isFlashingRed: boolean

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { WordLength } from '../types/game'
 
 interface Option {
@@ -12,11 +13,19 @@ const OPTIONS: Option[] = [
   { length: 7, difficulty: 'Çok Zor' },
 ]
 
+const TIMER_MIN = 10
+const TIMER_MAX = 20
+const TIMER_DEFAULT = 12
+
 interface WordLengthSetupProps {
-  onSelect: (length: WordLength) => void
+  onSelect: (length: WordLength, timerSeconds: number) => void
 }
 
 export function WordLengthSetup({ onSelect }: WordLengthSetupProps) {
+  const [timerSeconds, setTimerSeconds] = useState(TIMER_DEFAULT)
+
+  const pct = ((timerSeconds - TIMER_MIN) / (TIMER_MAX - TIMER_MIN)) * 100
+
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-6 w-full min-h-0">
       <div className="flex flex-col items-center gap-1">
@@ -28,7 +37,7 @@ export function WordLengthSetup({ onSelect }: WordLengthSetupProps) {
         {OPTIONS.map(({ length, difficulty }) => (
           <button
             key={length}
-            onClick={() => onSelect(length)}
+            onClick={() => onSelect(length, timerSeconds)}
             className="flex flex-col items-center justify-center gap-1 py-5 px-4 rounded-2xl
               bg-zinc-800 border-2 border-zinc-700 text-white
               hover:border-yellow-500/70 hover:bg-zinc-700 hover:shadow-lg hover:shadow-yellow-500/10
@@ -39,6 +48,38 @@ export function WordLengthSetup({ onSelect }: WordLengthSetupProps) {
             <span className="text-[11px] text-zinc-400">{difficulty}</span>
           </button>
         ))}
+      </div>
+
+      {/* Timer slider */}
+      <div className="w-full max-w-xs flex flex-col gap-2">
+        <div className="flex items-center justify-between text-xs text-zinc-400">
+          <span>Süre / Satır</span>
+          <span className="text-yellow-400 font-black text-base tabular-nums">{timerSeconds}s</span>
+        </div>
+
+        <div className="relative h-2 w-full">
+          {/* Track background */}
+          <div className="absolute inset-0 rounded-full bg-zinc-700" />
+          {/* Filled portion */}
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-yellow-400 transition-all duration-75"
+            style={{ width: `${pct}%` }}
+          />
+          <input
+            type="range"
+            min={TIMER_MIN}
+            max={TIMER_MAX}
+            step={1}
+            value={timerSeconds}
+            onChange={e => setTimerSeconds(Number(e.target.value))}
+            className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
+          />
+        </div>
+
+        <div className="flex justify-between text-[11px] text-zinc-600">
+          <span>{TIMER_MIN}s</span>
+          <span>{TIMER_MAX}s</span>
+        </div>
       </div>
     </div>
   )

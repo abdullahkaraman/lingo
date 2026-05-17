@@ -2,13 +2,12 @@ interface ScoreBoardProps {
   score: number
   remainingAttempts: number
   totalAttempts: number
+  timerMax: number
   timeLeft: number
   wordsPlayed: number
   wordsGuessed: number
   isPlaying: boolean
 }
-
-const TIMER_MAX = 12
 
 function timerColor(t: number): string {
   if (t >= 7) return 'text-green-400'
@@ -24,9 +23,9 @@ function timerBarColor(t: number): string {
 
 export function ScoreBoard({
   score, remainingAttempts, totalAttempts,
-  timeLeft, wordsPlayed, wordsGuessed, isPlaying,
+  timerMax, timeLeft, wordsPlayed, wordsGuessed, isPlaying,
 }: ScoreBoardProps) {
-  const pct = Math.max(0, (timeLeft / TIMER_MAX) * 100)
+  const pct = Math.max(0, (timeLeft / timerMax) * 100)
   const isUrgent = timeLeft <= 3 && isPlaying
 
   return (
