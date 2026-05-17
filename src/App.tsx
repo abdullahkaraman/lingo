@@ -73,9 +73,12 @@ export default function App() {
   // ── Auto-focus hidden input on mobile when gameplay starts/resumes ────────
   useEffect(() => {
     if (view === 'game' && phase === 'playing') {
-      // Delay lets animations/DOM settle before focusing
       const t = setTimeout(() => hiddenInputRef.current?.focus(), 80)
       return () => clearTimeout(t)
+    }
+    // Dismiss the native keyboard when the round ends
+    if (phase === 'round_success' || phase === 'round_failed') {
+      hiddenInputRef.current?.blur()
     }
   }, [view, phase])
 
