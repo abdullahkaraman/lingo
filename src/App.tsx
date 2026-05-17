@@ -420,6 +420,7 @@ export default function App() {
           wordLength={wordLength}
           wordsPlayed={wordsPlayed}
           wordsGuessed={wordsGuessed}
+          guesses={guesses}
           onNewWord={() => void startNewWord()}
         />
       )}
