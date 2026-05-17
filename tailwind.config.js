@@ -41,6 +41,10 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
         },
+        slideUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
       },
       animation: {
         flip: 'flip 0.5s ease-in-out forwards',
@@ -50,6 +54,7 @@ export default {
         fadeIn: 'fadeIn 0.3s ease-out forwards',
         flashRed: 'flashRed 0.7s ease-in-out forwards',
         timerPulse: 'timerPulse 0.5s ease-in-out infinite',
+        slideUp: 'slideUp 0.35s cubic-bezier(0.32,0.72,0,1) forwards',
       },
     },
   },
