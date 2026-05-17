@@ -51,6 +51,12 @@ const BLOCKLIST = new Set([
   'porn', 'porno', 'seks', 'erotik', 'escort',
 ])
 
+// TDK stores some loanwords with Ottoman circumflex marks (â, î, û).
+// Modern Turkish usage drops them; normalise before any other processing.
+function removeCircumflex(word) {
+  return word.replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
+}
+
 function isProperNoun(word) {
   return word[0] !== word[0].toLocaleLowerCase('tr-TR')
 }
@@ -97,7 +103,7 @@ async function main() {
     // Skip proper nouns (place names, languages, etc.)
     if (isProperNoun(line)) continue
 
-    const word = line.toLocaleLowerCase('tr-TR')
+    const word = removeCircumflex(line.toLocaleLowerCase('tr-TR'))
 
     // Keep only pure Turkish-alphabet words.
     if (!isPureTurkish(word)) continue
