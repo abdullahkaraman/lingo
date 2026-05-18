@@ -1,9 +1,8 @@
-import { VALID_WORDS } from '../data/validWords'
+import tdkValid from '../data/tdk-valid.json'
 import { EXTRA_WORDS } from '../data/extra-words'
 
-// All TDK words + supplementary list, uppercased — same transform as pickLocalWord.
 const validWordSet = new Set([
-  ...(Object.values(VALID_WORDS) as string[][]).flat(),
+  ...(Object.values(tdkValid) as string[][]).flat(),
   ...EXTRA_WORDS,
 ].map((w) => w.toLocaleUpperCase('tr-TR')))
 
