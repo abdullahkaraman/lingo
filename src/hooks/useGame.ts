@@ -3,9 +3,9 @@ import type { GameState, GuessRow, Letter, WordLength } from '../types/game'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
-import tdkWords from '../data/tdk-words.json'
+import tdkValid from '../data/tdk-valid.json'
 
-const WORD_LISTS = tdkWords as unknown as Record<number, [string, number][]>
+const WORD_LISTS = tdkValid as unknown as Record<number, string[]>
 
 const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 
@@ -54,24 +54,16 @@ function markUsed(len: WordLength, word: string): void {
 function pickLocalWord(wordLength: WordLength): string {
   const used = loadUsed(wordLength)
   let candidates = (WORD_LISTS[wordLength] ?? []).filter(
-    ([w]) => [...w].length === wordLength && !used.has(w.toLocaleUpperCase('tr-TR')),
+    (w) => !used.has(w.toLocaleUpperCase('tr-TR')),
   )
 
-  // All words for this length exhausted — reset and start the cycle over
   if (candidates.length === 0) {
     localStorage.removeItem(usedKey(wordLength))
-    candidates = (WORD_LISTS[wordLength] ?? []).filter(([w]) => [...w].length === wordLength)
+    candidates = WORD_LISTS[wordLength] ?? []
   }
 
-  // Weight by sqrt(count) — favours common words without extreme skew from raw counts
-  let total = 0
-  const weights = candidates.map(([, count]) => { const w = Math.sqrt(count); total += w; return w })
-  let r = Math.random() * total
-  for (let i = 0; i < candidates.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return candidates[i][0].toLocaleUpperCase('tr-TR')
-  }
-  return candidates[candidates.length - 1][0].toLocaleUpperCase('tr-TR')
+  const word = candidates[Math.floor(Math.random() * candidates.length)]
+  return word.toLocaleUpperCase('tr-TR')
 }
 
 function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
