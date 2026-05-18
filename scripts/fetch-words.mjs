@@ -51,6 +51,11 @@ const BLOCKLIST = new Set([
   'porn', 'porno', 'seks', 'erotik', 'escort',
 ])
 
+// Words confirmed to be in TDK sozluk.gov.tr but absent from the
+// ncarkaci/TDKDictionaryCrawler snapshot. Added to tdk-valid.json only
+// (not the game pool). Add entries here as players report false rejections.
+const SUPPLEMENT = ['dart']
+
 // TDK stores some loanwords with Ottoman circumflex marks (â, î, û).
 // Modern Turkish usage drops them; normalise before any other processing.
 function removeCircumflex(word) {
@@ -122,6 +127,12 @@ async function main() {
     if (count >= FREQ_MIN) {
       game[len].push([word, count])
     }
+  }
+
+  // Fold in supplement words (valid only, not game pool).
+  for (const word of SUPPLEMENT) {
+    const len = [...word].length
+    if (len >= 4 && len <= 7) valid[len].push(word)
   }
 
   // Deduplicate and sort both buckets.
