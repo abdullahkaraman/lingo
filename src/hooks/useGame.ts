@@ -51,7 +51,7 @@ function markUsed(len: WordLength, word: string): void {
   } catch {}
 }
 
-function pickLocalWord(wordLength: WordLength): string {
+function pickLocalWord(wordLength: WordLength, wordsPlayed: number): string {
   const used = loadUsed(wordLength)
   let candidates = (WORD_LISTS[wordLength] ?? []).filter(
     (w) => !used.has(w.toLocaleUpperCase('tr-TR')),
@@ -62,7 +62,29 @@ function pickLocalWord(wordLength: WordLength): string {
     candidates = WORD_LISTS[wordLength] ?? []
   }
 
-  const word = candidates[Math.floor(Math.random() * candidates.length)]
+  if (candidates.length === 1) return candidates[0].toLocaleUpperCase('tr-TR')
+
+  // Words are sorted most-to-least common by the fetch script.
+  // A Laplace distribution peaks at `focal`, which slides from index 0 (easiest)
+  // to index n-1 (hardest) as difficulty increases every 20 words (max level 10).
+  const MAX_DIFFICULTY = 10
+  const difficulty = Math.min(Math.floor(wordsPlayed / 20), MAX_DIFFICULTY)
+  const n = candidates.length
+  const focal = (difficulty / MAX_DIFFICULTY) * (n - 1)
+  const tau = (n - 1) / Math.log(20)
+
+  let totalWeight = 0
+  const weights = candidates.map((_, i) => {
+    const w = Math.exp(-Math.abs(i - focal) / tau)
+    totalWeight += w
+    return w
+  })
+  let r = Math.random() * totalWeight
+  let word = candidates[0]
+  for (let i = 0; i < n; i++) {
+    r -= weights[i]
+    if (r <= 0) { word = candidates[i]; break }
+  }
   return word.toLocaleUpperCase('tr-TR')
 }
 
@@ -107,7 +129,7 @@ export const useGame = create<GameStore>((set, get) => ({
   startNewWord: () => {
     const { wordLength, wordsPlayed, timerMax } = get()
 
-    const targetWord = pickLocalWord(wordLength)
+    const targetWord = pickLocalWord(wordLength, wordsPlayed)
     markUsed(wordLength, targetWord)
 
     const firstLetter = targetWord[0]

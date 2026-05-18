@@ -102,8 +102,9 @@ async function main() {
 
     valid[len].push(word)
 
-    if ((freqMap.get(word) ?? 0) >= FREQ_MIN) {
-      game[len].push(word)
+    const freq = freqMap.get(word) ?? 0
+    if (freq >= FREQ_MIN) {
+      game[len].push([word, freq])
     }
   }
 
@@ -119,7 +120,12 @@ async function main() {
     return arr.filter((w) => { if (seen.has(w)) return false; seen.add(w); return true })
   }
   for (const len of [4, 5, 6, 7]) {
-    game[len]  = dedup(game[len]).sort((a, b) => a.localeCompare(b, 'tr'))
+    // Sort by frequency descending so the game can apply positional weights.
+    const seen = new Set()
+    game[len] = game[len]
+      .sort(([, fa], [, fb]) => fb - fa)
+      .filter(([w]) => seen.has(w) ? false : (seen.add(w), true))
+      .map(([w]) => w)
     valid[len] = dedup(valid[len]).sort((a, b) => a.localeCompare(b, 'tr'))
   }
 
