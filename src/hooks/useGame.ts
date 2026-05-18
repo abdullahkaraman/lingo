@@ -3,9 +3,9 @@ import type { GameState, GuessRow, Letter, WordLength } from '../types/game'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
-import tdkValid from '../data/tdk-valid.json'
+import tdkData from '../data/tdk-valid.json'
 
-const WORD_LISTS = tdkValid as unknown as Record<number, string[]>
+const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
 const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 
