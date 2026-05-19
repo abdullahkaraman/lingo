@@ -26,29 +26,29 @@ export function applyGuess(
   rawGuess: string,
 ): ApplyGuessResult {
   if (state.phase !== 'playing') {
-    return { ok: false, error: 'Round not in progress' }
+    return { ok: false, error: 'Şu an aktif bir tur yok' }
   }
 
   if (state.currentTurn !== playerId) {
-    return { ok: false, error: "It's not your turn" }
+    return { ok: false, error: 'Sıra sende değil' }
   }
 
   const board = state.boards[playerId]
   if (!board || board.status !== 'guessing') {
-    return { ok: false, error: 'Not your turn' }
+    return { ok: false, error: 'Sıra sende değil' }
   }
 
   const guess = normalize(rawGuess)
   const target = state.targetWord
 
   if ([...guess].length !== state.wordLength) {
-    return { ok: false, error: 'Wrong word length' }
+    return { ok: false, error: 'Kelime uzunluğu yanlış' }
   }
   if (guess[0] !== target[0]) {
-    return { ok: false, error: 'Guess must start with the revealed first letter' }
+    return { ok: false, error: 'Kelime verilen harfle başlamalı' }
   }
   if (!isValidWord(guess)) {
-    return { ok: false, error: 'Not a valid word' }
+    return { ok: false, error: 'Bu kelime sözlükte yok!' }
   }
 
   const statuses = evaluate(guess, target)

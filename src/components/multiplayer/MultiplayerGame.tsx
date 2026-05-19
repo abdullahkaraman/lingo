@@ -3,13 +3,14 @@ import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
 import type { PublicState, GuessRow, LetterStatus } from '../../game-engine/types'
 import type { MultiplayerClient } from '../../multiplayer/client'
+import type { GameError } from '../../hooks/useMultiplayerGame'
 
 const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
 
 interface Props {
   state: PublicState
   myId: string
-  error: string | null
+  error: GameError | null
   client: MultiplayerClient
 }
 
@@ -73,14 +74,16 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   }, [myBoard.currentRowIndex, firstLetter])
 
   // Show error, shake the board, then auto-clear after 2.5 s.
+  // Watching error.key ensures the same message re-triggers on repeated invalid guesses.
   useEffect(() => {
     if (!error) return
-    setDisplayError(error)
+    setDisplayError(error.message)
     setShaking(true)
     const shakeTimer = setTimeout(() => setShaking(false), 600)
     const clearTimer = setTimeout(() => setDisplayError(null), 2500)
     return () => { clearTimeout(shakeTimer); clearTimeout(clearTimer) }
-  }, [error])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error?.key])
 
   // Auto-focus hidden input when it's our turn.
   useEffect(() => {

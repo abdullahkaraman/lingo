@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ConnectionStatus, MultiplayerClient } from '../multiplayer/client'
 import type { ServerEvent } from '../multiplayer/types'
 import type { PublicState, WordLength } from '../game-engine/types'
@@ -10,22 +10,27 @@ export interface MultiplayerGameActions {
   setWordLength: (wordLength: WordLength) => void
 }
 
+export interface GameError {
+  message: string
+  key: number // increments on every arrival so the same message re-triggers effects
+}
+
 export function useMultiplayerGame(client: MultiplayerClient): {
   state: PublicState | null
-  error: string | null
+  error: GameError | null
   connectionStatus: ConnectionStatus
 } & MultiplayerGameActions {
   const [state, setState] = useState<PublicState | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<GameError | null>(null)
+  const errorKey = useRef(0)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
 
   useEffect(() => {
     return client.subscribe((event: ServerEvent) => {
       if (event.type === 'state') {
         setState(event.state)
-        setError(null)
       } else if (event.type === 'error') {
-        setError(event.message)
+        setError({ message: event.message, key: ++errorKey.current })
       }
     })
   }, [client])

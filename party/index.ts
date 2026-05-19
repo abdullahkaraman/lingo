@@ -75,7 +75,7 @@ export default class LingoServer implements Party.Server {
         const isFull =
           !state.players[sender.id] && Object.keys(state.players).length >= 2
         if (isFull) {
-          sendError(sender, 'ROOM_FULL', 'This room is full')
+          sendError(sender, 'ROOM_FULL', 'Oda dolu')
           return
         }
         next = joinPlayer(state, sender.id, event.name)
@@ -84,11 +84,11 @@ export default class LingoServer implements Party.Server {
 
       case 'start_game': {
         if (sender.id !== state.hostId) {
-          sendError(sender, 'FORBIDDEN', 'Only the host can start the game')
+          sendError(sender, 'FORBIDDEN', 'Oyunu sadece host başlatabilir')
           return
         }
         if (Object.keys(state.players).length < 2) {
-          sendError(sender, 'NOT_ENOUGH_PLAYERS', 'Need 2 players to start')
+          sendError(sender, 'NOT_ENOUGH_PLAYERS', 'Başlamak için 2 oyuncu gerekiyor')
           return
         }
         next = startGame(state)
@@ -107,7 +107,7 @@ export default class LingoServer implements Party.Server {
 
       case 'next_round': {
         if (state.phase !== 'round_over') {
-          sendError(sender, 'INVALID_OP', 'No round to advance')
+          sendError(sender, 'INVALID_OP', 'İlerlenecek tur yok')
           return
         }
         next = startNextRound(state)
@@ -116,7 +116,7 @@ export default class LingoServer implements Party.Server {
 
       case 'set_word_length': {
         if (state.phase !== 'waiting') {
-          sendError(sender, 'INVALID_OP', 'Cannot change word length mid-game')
+          sendError(sender, 'INVALID_OP', 'Oyun devam ederken kelime uzunluğu değiştirilemez')
           return
         }
         next = setWordLength(state, event.wordLength)
