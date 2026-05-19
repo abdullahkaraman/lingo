@@ -29,6 +29,10 @@ export function applyGuess(
     return { ok: false, error: 'Round not in progress' }
   }
 
+  if (state.currentTurn !== playerId) {
+    return { ok: false, error: "It's not your turn" }
+  }
+
   const board = state.boards[playerId]
   if (!board || board.status !== 'guessing') {
     return { ok: false, error: 'Not your turn' }
@@ -71,7 +75,7 @@ export function applyGuess(
     },
   }
 
-  const roundOver = Object.values(newBoards).every((b) => b.status !== 'guessing')
+  const roundOver = won || Object.values(newBoards).every((b) => b.status !== 'guessing')
   const isLastRound = state.round >= state.maxRounds
   const newPhase: RoomState['phase'] = roundOver
     ? isLastRound
@@ -79,9 +83,30 @@ export function applyGuess(
       : 'round_over'
     : 'playing'
 
+  // Advance the turn.
+  // If the round is over, currentTurn doesn't matter.
+  // If the current player is still guessing (wrong guess, has attempts left) and
+  // the other player is already done, the current player keeps going.
+  // Otherwise the turn passes to the other player (if they're still guessing).
+  let nextTurn = state.currentTurn
+  if (!roundOver) {
+    const otherIds = Object.keys(newBoards).filter((id) => id !== playerId)
+    const otherStillGuessing = otherIds.find((id) => newBoards[id].status === 'guessing')
+    if (otherStillGuessing) {
+      nextTurn = otherStillGuessing
+    }
+    // else: other player is done, current player continues (nextTurn stays)
+  }
+
   return {
     ok: true,
-    state: { ...state, phase: newPhase, players: newPlayers, boards: newBoards },
+    state: {
+      ...state,
+      phase: newPhase,
+      players: newPlayers,
+      boards: newBoards,
+      currentTurn: nextTurn,
+    },
     won,
     roundOver,
   }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
 import { GameHeader } from './components/GameHeader'
 import { GameBoard } from './components/GameBoard'
 import { Keyboard } from './components/Keyboard'
@@ -12,6 +13,8 @@ import type { WordLength } from './types/game'
 const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
 
 export default function App() {
+  const roomId = new URLSearchParams(window.location.search).get('room')
+  if (roomId) return <MultiplayerApp roomId={roomId} />
   const {
     guesses, currentGuessIndex, wordLength, targetWord,
     phase, failReason, score, roundScore, errorMessage,
@@ -306,7 +309,22 @@ export default function App() {
         <GameHeader onRestart={view === 'game' ? handleRestart : null} />
 
         {view === 'setup' ? (
-          <WordLengthSetup onSelect={handleSelectLength} />
+          <>
+            <WordLengthSetup onSelect={handleSelectLength} />
+            <div className="mt-4 mb-6">
+              <button
+                onClick={() => {
+                  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+                  window.location.href = `?room=${id}`
+                }}
+                className="px-6 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
+                  text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
+                  active:scale-95"
+              >
+                Çok Oyunculu Oda Oluştur
+              </button>
+            </div>
+          </>
         ) : (
           /* Tapping anywhere on the game area re-focuses the hidden input */
           <div

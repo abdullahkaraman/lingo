@@ -42,6 +42,8 @@ export interface RoomState {
   round: number
   maxRounds: number
   seed: string
+  currentTurn: string       // playerId whose turn it is; '' when not playing
+  roundFirstPlayerId: string // who went first this round (alternates each round)
 }
 
 // ── Client-visible shapes ─────────────────────────────────────────────────────
@@ -69,7 +71,9 @@ export interface PublicState {
   round: number
   maxRounds: number
   firstLetter: string
-  targetWord?: string // present only when phase is round_over or game_over
+  targetWord?: string  // present only when phase is round_over or game_over
+  currentTurn: string  // playerId whose turn it is
+  isMyTurn: boolean    // convenience: currentTurn === this client's id
   players: Record<string, PublicPlayer>
   myBoard: PlayerBoard
   opponents: Record<string, OpponentView>

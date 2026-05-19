@@ -49,6 +49,8 @@ export function createRoomState(
     round: 1,
     maxRounds,
     seed,
+    currentTurn: '',       // set when the game starts
+    roundFirstPlayerId: hostId,
   }
 }
 
@@ -84,7 +86,7 @@ export function leavePlayer(state: RoomState, playerId: string): RoomState {
 export function startGame(state: RoomState): RoomState {
   if (state.phase !== 'waiting') return state
   if (Object.keys(state.players).length < 2) return state
-  return { ...state, phase: 'playing' }
+  return { ...state, phase: 'playing', currentTurn: state.roundFirstPlayerId }
 }
 
 export function startNextRound(state: RoomState): RoomState {
@@ -95,7 +97,18 @@ export function startNextRound(state: RoomState): RoomState {
   for (const id of Object.keys(state.players)) {
     boards[id] = emptyBoard(state.wordLength, targetWord)
   }
-  return { ...state, phase: 'playing', round, targetWord, boards }
+  // Alternate who goes first each round.
+  const playerIds = Object.keys(state.players)
+  const nextFirst = playerIds.find((id) => id !== state.roundFirstPlayerId) ?? playerIds[0]
+  return {
+    ...state,
+    phase: 'playing',
+    round,
+    targetWord,
+    boards,
+    roundFirstPlayerId: nextFirst,
+    currentTurn: nextFirst,
+  }
 }
 
 export function setWordLength(state: RoomState, wordLength: WordLength): RoomState {
@@ -146,6 +159,8 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     maxRounds: state.maxRounds,
     firstLetter: state.targetWord[0],
     targetWord: roundDone ? state.targetWord : undefined,
+    currentTurn: state.currentTurn,
+    isMyTurn: state.phase === 'playing' && state.currentTurn === playerId,
     players,
     myBoard,
     opponents,

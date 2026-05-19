@@ -1,0 +1,98 @@
+import { useState } from 'react'
+import type { PublicState, WordLength } from '../../game-engine/types'
+
+interface Props {
+  state: PublicState
+  myId: string
+  roomId: string
+  onStart: () => void
+  onSetWordLength: (wl: WordLength) => void
+}
+
+const LENGTHS: WordLength[] = [4, 5, 6, 7]
+
+export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength }: Props) {
+  const [copied, setCopied] = useState(false)
+  const isHost = state.players[myId]?.isHost
+  const players = Object.values(state.players)
+  const canStart = isHost && players.length >= 2
+
+  const roomUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`
+
+  function handleCopy() {
+    void navigator.clipboard.writeText(roomUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-6 px-6 pt-8 w-full max-w-sm mx-auto">
+      <div className="text-center">
+        <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-1">Oda bağlantısını paylaş</div>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-600
+            text-zinc-300 text-sm font-mono hover:border-zinc-400 transition-colors active:scale-95"
+        >
+          <span className="truncate max-w-[200px]">{roomUrl}</span>
+          <span className="shrink-0">{copied ? '✓' : '⎘'}</span>
+        </button>
+      </div>
+
+      <div className="w-full">
+        <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Oyuncular</div>
+        <div className="flex flex-col gap-2">
+          {players.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${p.connected ? 'bg-green-400' : 'bg-zinc-600'}`} />
+              <span className="font-semibold text-white flex-1">{p.name}</span>
+              {p.isHost && <span className="text-xs text-yellow-400 font-mono">host</span>}
+              {p.id === myId && <span className="text-xs text-zinc-500">(sen)</span>}
+            </div>
+          ))}
+          {players.length < 2 && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900 border border-dashed border-zinc-700">
+              <div className="w-2 h-2 rounded-full bg-zinc-700 shrink-0 animate-pulse" />
+              <span className="text-zinc-500 text-sm">Rakip bekleniyor…</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isHost && (
+        <div className="w-full">
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Kelime uzunluğu</div>
+          <div className="flex gap-2">
+            {LENGTHS.map((l) => (
+              <button
+                key={l}
+                onClick={() => onSetWordLength(l)}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm border transition-all active:scale-95 ${
+                  state.wordLength === l
+                    ? 'bg-yellow-500 border-yellow-400 text-black'
+                    : 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:border-zinc-400'
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isHost ? (
+        <button
+          onClick={onStart}
+          disabled={!canStart}
+          className="w-full py-3.5 rounded-xl bg-green-600 text-white font-bold text-lg
+            disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
+        >
+          {canStart ? 'Oyunu Başlat' : 'Rakip bekleniyor…'}
+        </button>
+      ) : (
+        <div className="text-zinc-500 text-sm text-center">Host oyunu başlatacak…</div>
+      )}
+    </div>
+  )
+}
