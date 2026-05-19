@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { MultiplayerClient } from '../multiplayer/client'
+import type { ConnectionStatus, MultiplayerClient } from '../multiplayer/client'
 import type { ServerEvent } from '../multiplayer/types'
 import type { PublicState, WordLength } from '../game-engine/types'
 
@@ -13,9 +13,11 @@ export interface MultiplayerGameActions {
 export function useMultiplayerGame(client: MultiplayerClient): {
   state: PublicState | null
   error: string | null
+  connectionStatus: ConnectionStatus
 } & MultiplayerGameActions {
   const [state, setState] = useState<PublicState | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
 
   useEffect(() => {
     return client.subscribe((event: ServerEvent) => {
@@ -26,6 +28,10 @@ export function useMultiplayerGame(client: MultiplayerClient): {
         setError(event.message)
       }
     })
+  }, [client])
+
+  useEffect(() => {
+    return client.onStatusChange(setConnectionStatus)
   }, [client])
 
   const sendGuess = useCallback(
@@ -48,5 +54,5 @@ export function useMultiplayerGame(client: MultiplayerClient): {
     [client],
   )
 
-  return { state, error, sendGuess, startGame, nextRound, setWordLength }
+  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength }
 }

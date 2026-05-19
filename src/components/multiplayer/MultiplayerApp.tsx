@@ -25,7 +25,7 @@ export function MultiplayerApp({ roomId }: Props) {
   const clientRef = useRef(new PartyKitClient())
   const client = clientRef.current
 
-  const { state, error, startGame, nextRound, setWordLength } = useMultiplayerGame(client)
+  const { state, error, connectionStatus, startGame, nextRound, setWordLength } = useMultiplayerGame(client)
 
   const [playerName, setPlayerName] = useState(
     () => localStorage.getItem('lingo_player_name') ?? '',
@@ -52,6 +52,15 @@ export function MultiplayerApp({ roomId }: Props) {
     >
       <div className="w-full max-w-lg h-full flex flex-col items-center">
         <GameHeader onRestart={null} />
+
+        {playerName && connectionStatus === 'disconnected' && (
+          <div className="w-full px-3 mb-1">
+            <div className="w-full px-4 py-2 rounded-xl bg-red-900/70 border border-red-700/50
+              text-red-300 text-xs text-center font-semibold">
+              Sunucuya bağlanılamıyor — yeniden deneniyor…
+            </div>
+          </div>
+        )}
 
         {!playerName && (
           <MultiplayerEntry roomId={roomId} onJoin={handleJoin} />

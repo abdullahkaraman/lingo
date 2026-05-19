@@ -5,10 +5,14 @@ import type { ClientEvent, ServerEvent } from './types'
  * Swap out implementations (PartyKit → Socket.io → raw WebSocket)
  * without touching any React component or game-engine code.
  */
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
+
 export interface MultiplayerClient {
   connect(roomId: string, playerId: string, playerName: string): void
   disconnect(): void
   send(event: ClientEvent): void
   /** Registers a handler for all server events. Returns an unsubscribe function. */
   subscribe(handler: (event: ServerEvent) => void): () => void
+  /** Registers a handler for connection status changes. Returns an unsubscribe function. */
+  onStatusChange(handler: (status: ConnectionStatus) => void): () => void
 }
