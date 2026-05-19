@@ -8,6 +8,7 @@ import {
   setWordLength,
   startGame,
   startNextRound,
+  voteRematch,
 } from '../src/game-engine'
 import type { RoomState } from '../src/game-engine/types'
 import type { ClientEvent } from '../src/multiplayer/types'
@@ -120,6 +121,15 @@ export default class LingoServer implements Party.Server {
           return
         }
         next = setWordLength(state, event.wordLength)
+        break
+      }
+
+      case 'rematch_vote': {
+        if (state.phase !== 'game_over') {
+          sendError(sender, 'INVALID_OP', 'Rövanş sadece oyun bittikten sonra istenebilir')
+          return
+        }
+        next = voteRematch(state, sender.id)
         break
       }
     }

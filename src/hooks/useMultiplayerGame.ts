@@ -8,6 +8,7 @@ export interface MultiplayerGameActions {
   startGame: () => void
   nextRound: () => void
   setWordLength: (wordLength: WordLength) => void
+  voteRematch: () => void
 }
 
 export interface GameError {
@@ -60,5 +61,10 @@ export function useMultiplayerGame(client: MultiplayerClient): {
     [client],
   )
 
-  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength }
+  const voteRematch = useCallback(
+    () => client.send({ type: 'rematch_vote' }),
+    [client],
+  )
+
+  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength, voteRematch }
 }

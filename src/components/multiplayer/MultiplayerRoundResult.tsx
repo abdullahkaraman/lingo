@@ -5,10 +5,11 @@ interface Props {
   state: PublicState
   myId: string
   onNextRound: () => void
+  onVoteRematch: () => void
 }
 
-export function MultiplayerRoundResult({ state, myId, onNextRound }: Props) {
-  const { phase, targetWord, players, myBoard, opponents, round, maxRounds } = state
+export function MultiplayerRoundResult({ state, myId, onNextRound, onVoteRematch }: Props) {
+  const { phase, targetWord, players, myBoard, opponents, round, maxRounds, myVotedRematch, opponentVotedRematch } = state
   const isGameOver = phase === 'game_over'
 
   const myStatus = myBoard.status
@@ -97,13 +98,29 @@ export function MultiplayerRoundResult({ state, myId, onNextRound }: Props) {
 
       {/* Action */}
       {isGameOver ? (
-        <a
-          href={window.location.pathname}
-          className="w-full py-3 rounded-xl bg-zinc-700 text-white font-bold text-center
-            active:scale-95 transition-all block"
-        >
-          Ana Sayfaya Dön
-        </a>
+        <div className="w-full flex flex-col gap-3">
+          {myVotedRematch ? (
+            <div className="w-full py-3 rounded-xl bg-zinc-800 border border-zinc-600 text-zinc-400
+              font-semibold text-center text-sm">
+              {opponentVotedRematch ? 'Rövanş başlatılıyor…' : 'Rakibin rövanş onayı bekleniyor…'}
+            </div>
+          ) : (
+            <button
+              onClick={onVoteRematch}
+              className="w-full py-3 rounded-xl bg-yellow-500 text-black font-bold text-lg
+                active:scale-95 transition-all"
+            >
+              {opponentVotedRematch ? '🔥 Rakip rövanş istiyor — Kabul et!' : 'Rövanş İste'}
+            </button>
+          )}
+          <a
+            href={window.location.pathname}
+            className="w-full py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400
+              font-semibold text-sm text-center active:scale-95 transition-all block"
+          >
+            Ana Sayfaya Dön
+          </a>
+        </div>
       ) : (
         <button
           onClick={onNextRound}

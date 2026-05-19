@@ -25,7 +25,7 @@ export function MultiplayerApp({ roomId }: Props) {
   const clientRef = useRef(new PartyKitClient())
   const client = clientRef.current
 
-  const { state, error, connectionStatus, startGame, nextRound, setWordLength } = useMultiplayerGame(client)
+  const { state, error, connectionStatus, startGame, nextRound, setWordLength, voteRematch } = useMultiplayerGame(client)
 
   const [playerName, setPlayerName] = useState(
     () => localStorage.getItem('lingo_player_name') ?? '',
@@ -97,6 +97,7 @@ export function MultiplayerApp({ roomId }: Props) {
               state={state}
               myId={playerId}
               onNextRound={nextRound}
+              onVoteRematch={voteRematch}
             />
           </div>
         )}

@@ -42,8 +42,11 @@ export interface RoomState {
   round: number
   maxRounds: number
   seed: string
-  currentTurn: string       // playerId whose turn it is; '' when not playing
+  currentTurn: string        // playerId whose turn it is; '' when not playing
   roundFirstPlayerId: string // who went first this round (alternates each round)
+  gameFirstPlayerId: string  // who went first in round 1 of this game (swaps on rematch)
+  rematchCount: number       // 0 = original game, 1 = first rematch, …
+  rematchVotes: string[]     // playerIds who have pressed "Rematch"
 }
 
 // ── Client-visible shapes ─────────────────────────────────────────────────────
@@ -77,4 +80,6 @@ export interface PublicState {
   players: Record<string, PublicPlayer>
   myBoard: PlayerBoard
   opponents: Record<string, OpponentView>
+  myVotedRematch: boolean       // has this client pressed Rematch?
+  opponentVotedRematch: boolean // has the opponent pressed Rematch?
 }

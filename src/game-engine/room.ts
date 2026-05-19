@@ -49,8 +49,11 @@ export function createRoomState(
     round: 1,
     maxRounds,
     seed,
-    currentTurn: '',       // set when the game starts
+    currentTurn: '',
     roundFirstPlayerId: hostId,
+    gameFirstPlayerId: hostId,
+    rematchCount: 0,
+    rematchVotes: [],
   }
 }
 
@@ -86,7 +89,65 @@ export function leavePlayer(state: RoomState, playerId: string): RoomState {
 export function startGame(state: RoomState): RoomState {
   if (state.phase !== 'waiting') return state
   if (Object.keys(state.players).length < 2) return state
-  return { ...state, phase: 'playing', currentTurn: state.roundFirstPlayerId }
+  return {
+    ...state,
+    phase: 'playing',
+    currentTurn: state.roundFirstPlayerId,
+    gameFirstPlayerId: state.roundFirstPlayerId,
+  }
+}
+
+function startRematch(state: RoomState): RoomState {
+  const rematchCount = state.rematchCount + 1
+  // Use a distinct seed per rematch so words never repeat across games.
+  const effectiveSeed = `${state.seed}-r${rematchCount}`
+
+  // Swap who goes first: the player who started the previous game goes second now.
+  const playerIds = Object.keys(state.players)
+  const newFirst =
+    playerIds.find((id) => id !== state.gameFirstPlayerId) ?? state.gameFirstPlayerId
+
+  const targetWord = pickWord(state.wordLength, effectiveSeed, 1)
+
+  const boards: Record<string, PlayerBoard> = {}
+  for (const id of playerIds) {
+    boards[id] = emptyBoard(state.wordLength, targetWord)
+  }
+
+  const players = { ...state.players }
+  for (const id of playerIds) {
+    players[id] = { ...players[id], score: 0 }
+  }
+
+  return {
+    ...state,
+    phase: 'playing',
+    round: 1,
+    seed: effectiveSeed,
+    targetWord,
+    boards,
+    players,
+    currentTurn: newFirst,
+    roundFirstPlayerId: newFirst,
+    gameFirstPlayerId: newFirst,
+    rematchCount,
+    rematchVotes: [],
+  }
+}
+
+export function voteRematch(state: RoomState, playerId: string): RoomState {
+  if (state.phase !== 'game_over') return state
+  if (state.rematchVotes.includes(playerId)) return state
+
+  const newVotes = [...state.rematchVotes, playerId]
+  const connectedIds = Object.keys(state.players).filter((id) => state.players[id].connected)
+
+  // All connected players have voted — start the rematch.
+  if (connectedIds.every((id) => newVotes.includes(id))) {
+    return startRematch({ ...state, rematchVotes: newVotes })
+  }
+
+  return { ...state, rematchVotes: newVotes }
 }
 
 export function startNextRound(state: RoomState): RoomState {
@@ -151,6 +212,8 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     }
   }
 
+  const opponentIds = Object.keys(state.players).filter((id) => id !== playerId)
+
   return {
     roomId: state.id,
     phase: state.phase,
@@ -164,5 +227,7 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     players,
     myBoard,
     opponents,
+    myVotedRematch: state.rematchVotes.includes(playerId),
+    opponentVotedRematch: opponentIds.some((id) => state.rematchVotes.includes(id)),
   }
 }
