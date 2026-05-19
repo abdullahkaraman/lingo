@@ -56,6 +56,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
   const [input, setInput] = useState(firstLetter)
   const [shaking, setShaking] = useState(false)
+  const [displayError, setDisplayError] = useState<string | null>(null)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
 
   // Reset input when a new round starts or when it becomes our turn.
@@ -71,12 +72,14 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     }
   }, [myBoard.currentRowIndex, firstLetter])
 
-  // Shake + auto-clear on server error.
+  // Show error, shake the board, then auto-clear after 2.5 s.
   useEffect(() => {
     if (!error) return
+    setDisplayError(error)
     setShaking(true)
-    const t = setTimeout(() => setShaking(false), 600)
-    return () => clearTimeout(t)
+    const shakeTimer = setTimeout(() => setShaking(false), 600)
+    const clearTimer = setTimeout(() => setDisplayError(null), 2500)
+    return () => { clearTimeout(shakeTimer); clearTimeout(clearTimer) }
   }, [error])
 
   // Auto-focus hidden input when it's our turn.
@@ -197,9 +200,9 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
       {/* Error message */}
       <div className="h-7 flex items-center justify-center mb-1 w-full max-w-lg">
-        {error && (
+        {displayError && (
           <div className="px-4 py-1 bg-red-900/80 border border-red-600/50 rounded-full text-red-300 text-sm font-semibold animate-fadeIn">
-            {error}
+            {displayError}
           </div>
         )}
       </div>
@@ -236,8 +239,8 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
         />
       </div>
 
-      {/* On-screen keyboard */}
-      <div className="w-full pb-4 mt-auto">
+      {/* On-screen keyboard — hidden on mobile, shown on desktop */}
+      <div className="hidden md:block w-full pb-4 mt-auto">
         <Keyboard
           onKey={handleTypeChar}
           onDelete={handleDelete}
