@@ -29,6 +29,7 @@ export function useMultiplayerGame(client: MultiplayerClient): {
     return client.subscribe((event: ServerEvent) => {
       if (event.type === 'state') {
         setState(event.state)
+        setError(null)
       } else if (event.type === 'error') {
         setError({ message: event.message, key: ++errorKey.current })
       }

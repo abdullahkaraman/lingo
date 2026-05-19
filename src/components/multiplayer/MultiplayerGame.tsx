@@ -75,8 +75,14 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
   // Show error, shake the board, then auto-clear after 2.5 s.
   // Watching error.key ensures the same message re-triggers on repeated invalid guesses.
+  // When error becomes null (state update / new round), clear immediately so old toasts
+  // don't linger after the cleanup function cancels the auto-clear timer.
   useEffect(() => {
-    if (!error) return
+    if (!error) {
+      setDisplayError(null)
+      setShaking(false)
+      return
+    }
     setDisplayError(error.message)
     setShaking(true)
     const shakeTimer = setTimeout(() => setShaking(false), 600)
