@@ -7,11 +7,13 @@ interface Props {
   roomId: string
   onStart: () => void
   onSetWordLength: (wl: WordLength) => void
+  onSetTimer: (seconds: number) => void
 }
 
 const LENGTHS: WordLength[] = [4, 5, 6, 7]
+const TIMER_OPTIONS = [0, 10, 15, 20, 25, 30]
 
-export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength }: Props) {
+export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength, onSetTimer }: Props) {
   const [copied, setCopied] = useState(false)
   const isHost = state.players[myId]?.isHost
   const players = Object.values(state.players)
@@ -61,24 +63,45 @@ export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength
       </div>
 
       {isHost && (
-        <div className="w-full">
-          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Kelime uzunluğu</div>
-          <div className="flex gap-2">
-            {LENGTHS.map((l) => (
-              <button
-                key={l}
-                onClick={() => onSetWordLength(l)}
-                className={`flex-1 py-2.5 rounded-xl font-bold text-sm border transition-all active:scale-95 ${
-                  state.wordLength === l
-                    ? 'bg-yellow-500 border-yellow-400 text-black'
-                    : 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:border-zinc-400'
-                }`}
-              >
-                {l}
-              </button>
-            ))}
+        <>
+          <div className="w-full">
+            <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Kelime uzunluğu</div>
+            <div className="flex gap-2">
+              {LENGTHS.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => onSetWordLength(l)}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm border transition-all active:scale-95 ${
+                    state.wordLength === l
+                      ? 'bg-yellow-500 border-yellow-400 text-black'
+                      : 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:border-zinc-400'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+
+          <div className="w-full">
+            <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Tur süresi</div>
+            <div className="flex gap-2">
+              {TIMER_OPTIONS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => onSetTimer(t)}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm border transition-all active:scale-95 ${
+                    (state.timerSeconds ?? 0) === t
+                      ? 'bg-yellow-500 border-yellow-400 text-black'
+                      : 'bg-zinc-800 border-zinc-600 text-zinc-300 hover:border-zinc-400'
+                  }`}
+                >
+                  {t === 0 ? 'Yok' : `${t}s`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {isHost ? (

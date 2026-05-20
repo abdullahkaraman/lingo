@@ -52,12 +52,14 @@ function computeLetterStatuses(rows: GuessRow[]): Record<string, string> {
 }
 
 export function MultiplayerGame({ state, myId, error, client }: Props) {
-  const { isMyTurn, myBoard, wordLength, firstLetter, players } = state
+  const { isMyTurn, myBoard, wordLength, firstLetter, players, timerSeconds } = state
   const canGuess = isMyTurn && myBoard.status === 'guessing'
+  const timerActive = timerSeconds > 0
 
   const [input, setInput] = useState(firstLetter)
   const [shaking, setShaking] = useState(false)
   const [displayError, setDisplayError] = useState<string | null>(null)
+  const [timeLeft, setTimeLeft] = useState(timerSeconds)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
 
   // Reset input when a new round starts or when it becomes our turn.
@@ -72,6 +74,22 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
       setInput(firstLetter)
     }
   }, [myBoard.currentRowIndex, firstLetter])
+
+  // Reset and run countdown timer when it's our turn.
+  useEffect(() => {
+    if (!timerActive) return
+    setTimeLeft(timerSeconds)
+  }, [state.currentTurn, timerSeconds, timerActive])
+
+  useEffect(() => {
+    if (!timerActive || !canGuess) return
+    if (timeLeft <= 0) {
+      client.send({ type: 'skip_turn' })
+      return
+    }
+    const id = setTimeout(() => setTimeLeft((t) => t - 1), 1000)
+    return () => clearTimeout(id)
+  }, [timeLeft, timerActive, canGuess, client])
 
   // Show error, shake the board, then auto-clear after 2.5 s.
   // Watching error.key ensures the same message re-triggers on repeated invalid guesses.
@@ -184,6 +202,26 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
           ? 'Senin sıran!'
           : 'Rakibin düşünüyor…'}
       </div>
+
+      {/* Turn timer */}
+      {timerActive && canGuess && (
+        <div className="w-full max-w-lg mb-2 px-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-zinc-500">Süre</span>
+            <span className={`text-xs font-bold tabular-nums ${
+              timeLeft <= 5 ? 'text-red-400' : timeLeft <= 10 ? 'text-yellow-400' : 'text-green-400'
+            }`}>{timeLeft}s</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ${
+                timeLeft <= 5 ? 'bg-red-500' : timeLeft <= 10 ? 'bg-yellow-400' : 'bg-green-500'
+              }`}
+              style={{ width: `${(timeLeft / timerSeconds) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Opponent progress dots */}
       {opponentEntries.map(([id, board]) => (

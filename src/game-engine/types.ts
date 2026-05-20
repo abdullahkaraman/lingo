@@ -47,6 +47,7 @@ export interface RoomState {
   gameFirstPlayerId: string  // who went first in round 1 of this game (swaps on rematch)
   rematchCount: number       // 0 = original game, 1 = first rematch, …
   rematchVotes: string[]     // playerIds who have pressed "Rematch"
+  timerSeconds: number       // seconds per turn; 0 = no timer
 }
 
 // ── Client-visible shapes ─────────────────────────────────────────────────────
@@ -82,4 +83,5 @@ export interface PublicState {
   opponents: Record<string, OpponentView>
   myVotedRematch: boolean       // has this client pressed Rematch?
   opponentVotedRematch: boolean // has the opponent pressed Rematch?
+  timerSeconds: number          // seconds per turn; 0 = no timer
 }

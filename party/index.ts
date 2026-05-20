@@ -5,7 +5,9 @@ import {
   getPublicState,
   joinPlayer,
   leavePlayer,
+  setTimer,
   setWordLength,
+  skipTurn,
   startGame,
   startNextRound,
   voteRematch,
@@ -121,6 +123,32 @@ export default class LingoServer implements Party.Server {
           return
         }
         next = setWordLength(state, event.wordLength)
+        break
+      }
+
+      case 'set_timer': {
+        if (state.phase !== 'waiting') {
+          sendError(sender, 'INVALID_OP', 'Oyun devam ederken süre değiştirilemez')
+          return
+        }
+        if (sender.id !== state.hostId) {
+          sendError(sender, 'FORBIDDEN', 'Sadece host süreyi değiştirebilir')
+          return
+        }
+        next = setTimer(state, event.timerSeconds)
+        break
+      }
+
+      case 'skip_turn': {
+        if (state.phase !== 'playing') {
+          sendError(sender, 'INVALID_OP', 'Şu an aktif bir tur yok')
+          return
+        }
+        if (state.currentTurn !== sender.id) {
+          sendError(sender, 'INVALID_OP', 'Sıra sende değil')
+          return
+        }
+        next = skipTurn(state, sender.id)
         break
       }
 

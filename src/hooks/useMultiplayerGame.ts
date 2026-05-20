@@ -8,6 +8,8 @@ export interface MultiplayerGameActions {
   startGame: () => void
   nextRound: () => void
   setWordLength: (wordLength: WordLength) => void
+  setTimer: (timerSeconds: number) => void
+  skipTurn: () => void
   voteRematch: () => void
 }
 
@@ -61,10 +63,20 @@ export function useMultiplayerGame(client: MultiplayerClient): {
     [client],
   )
 
+  const setTimer = useCallback(
+    (timerSeconds: number) => client.send({ type: 'set_timer', timerSeconds }),
+    [client],
+  )
+
+  const skipTurn = useCallback(
+    () => client.send({ type: 'skip_turn' }),
+    [client],
+  )
+
   const voteRematch = useCallback(
     () => client.send({ type: 'rematch_vote' }),
     [client],
   )
 
-  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength, voteRematch }
+  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength, setTimer, skipTurn, voteRematch }
 }

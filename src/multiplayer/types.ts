@@ -8,6 +8,8 @@ export type ClientEvent =
   | { type: 'guess'; word: string }
   | { type: 'next_round' }
   | { type: 'set_word_length'; wordLength: WordLength }
+  | { type: 'set_timer'; timerSeconds: number }
+  | { type: 'skip_turn' }
   | { type: 'rematch_vote' }
 
 // ── Server → Client ───────────────────────────────────────────────────────────

@@ -54,6 +54,7 @@ export function createRoomState(
     gameFirstPlayerId: hostId,
     rematchCount: 0,
     rematchVotes: [],
+    timerSeconds: 0,
   }
 }
 
@@ -175,7 +176,7 @@ export function startNextRound(state: RoomState): RoomState {
 export function setWordLength(state: RoomState, wordLength: WordLength): RoomState {
   if (state.phase !== 'waiting') return state
   const savedPlayers = state.players
-  const next = createRoomState(state.id, state.hostId, wordLength, state.maxRounds)
+  const next = { ...createRoomState(state.id, state.hostId, wordLength, state.maxRounds), timerSeconds: state.timerSeconds }
   // Re-add all players with their existing names and scores.
   let s = next
   for (const [id, p] of Object.entries(savedPlayers)) {
@@ -183,6 +184,42 @@ export function setWordLength(state: RoomState, wordLength: WordLength): RoomSta
     if (!p.connected) s = leavePlayer(s, id)
   }
   return s
+}
+
+export function setTimer(state: RoomState, timerSeconds: number): RoomState {
+  if (state.phase !== 'waiting') return state
+  return { ...state, timerSeconds }
+}
+
+export function skipTurn(state: RoomState, playerId: string): RoomState {
+  if (state.phase !== 'playing') return state
+  if (state.currentTurn !== playerId) return state
+
+  const board = state.boards[playerId]
+  if (!board || board.status !== 'guessing') return state
+
+  const exhausted = board.currentRowIndex >= MAX_ATTEMPTS - 1
+  const newBoard: PlayerBoard = {
+    ...board,
+    currentRowIndex: exhausted ? board.currentRowIndex : board.currentRowIndex + 1,
+    status: exhausted ? 'lost' : 'guessing',
+  }
+
+  const newBoards = { ...state.boards, [playerId]: newBoard }
+  const roundOver = Object.values(newBoards).every((b) => b.status !== 'guessing')
+  const isLastRound = state.round >= state.maxRounds
+  const newPhase: RoomState['phase'] = roundOver
+    ? isLastRound ? 'game_over' : 'round_over'
+    : 'playing'
+
+  let nextTurn = state.currentTurn
+  if (!roundOver) {
+    const otherIds = Object.keys(newBoards).filter((id) => id !== playerId)
+    const otherStillGuessing = otherIds.find((id) => newBoards[id].status === 'guessing')
+    if (otherStillGuessing) nextTurn = otherStillGuessing
+  }
+
+  return { ...state, phase: newPhase, boards: newBoards, currentTurn: nextTurn }
 }
 
 export function getPublicState(state: RoomState, playerId: string): PublicState {
@@ -229,5 +266,6 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     opponents,
     myVotedRematch: state.rematchVotes.includes(playerId),
     opponentVotedRematch: opponentIds.some((id) => state.rematchVotes.includes(id)),
+    timerSeconds: state.timerSeconds ?? 0,
   }
 }

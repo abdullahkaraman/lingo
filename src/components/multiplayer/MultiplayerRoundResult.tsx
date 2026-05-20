@@ -59,10 +59,10 @@ export function MultiplayerRoundResult({ state, myId, onNextRound, onVoteRematch
       {/* Both boards side by side */}
       <div className="w-full">
         <div className="text-xs text-zinc-500 uppercase tracking-widest text-center mb-3">Tahminler</div>
-        <div className="flex gap-3 justify-center items-start">
+        <div className="grid grid-cols-2 gap-3 w-full">
           {/* My board */}
-          <div className="flex-1 max-w-[160px]">
-            <div className="text-xs text-center text-zinc-400 mb-2 font-semibold">
+          <div className="min-w-0">
+            <div className="text-xs text-center text-zinc-400 mb-2 font-semibold truncate">
               {players[myId]?.name ?? 'Sen'}
             </div>
             <GameBoard
@@ -76,8 +76,8 @@ export function MultiplayerRoundResult({ state, myId, onNextRound, onVoteRematch
 
           {/* Opponent boards */}
           {opponentEntries.map(([id, board]) => (
-            <div key={id} className="flex-1 max-w-[160px]">
-              <div className="text-xs text-center text-zinc-400 mb-2 font-semibold">
+            <div key={id} className="min-w-0">
+              <div className="text-xs text-center text-zinc-400 mb-2 font-semibold truncate">
                 {players[id]?.name ?? 'Rakip'}
               </div>
               {board.rows ? (
