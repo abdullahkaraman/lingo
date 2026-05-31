@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
+import { LobbyPage } from './components/multiplayer/LobbyPage'
 import { GameHeader } from './components/GameHeader'
 import { GameBoard } from './components/GameBoard'
 import { Keyboard } from './components/Keyboard'
@@ -13,8 +14,10 @@ import type { WordLength } from './types/game'
 const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
 
 export default function App() {
-  const roomId = new URLSearchParams(window.location.search).get('room')
+  const params = new URLSearchParams(window.location.search)
+  const roomId = params.get('room')
   if (roomId) return <MultiplayerApp roomId={roomId} />
+  if (params.has('lobby')) return <LobbyPage />
   const {
     guesses, currentGuessIndex, wordLength, targetWord,
     phase, failReason, score, roundScore, errorMessage,
@@ -375,17 +378,25 @@ export default function App() {
               )}
             </div>
 
-            <div className="mt-4 mb-6">
+            <div className="mt-4 mb-6 flex gap-2 justify-center">
               <button
                 onClick={() => {
                   const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
                   window.location.href = `?room=${id}`
                 }}
-                className="px-6 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
+                className="px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
                   text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
                   active:scale-95"
               >
-                Çok Oyunculu Oda Oluştur
+                Oda Oluştur
+              </button>
+              <button
+                onClick={() => { window.location.href = '?lobby' }}
+                className="px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
+                  text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
+                  active:scale-95"
+              >
+                Aktif Odalar
               </button>
             </div>
           </>

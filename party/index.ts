@@ -17,6 +17,32 @@ import type { ClientEvent } from '../src/multiplayer/types'
 
 const STATE_KEY = 'room'
 
+async function pingLobby(room: Party.Room, state: RoomState): Promise<void> {
+  try {
+    const lobbyParty = room.context.parties['lobby']
+    if (!lobbyParty) return
+    const connectedCount = Object.values(state.players).filter((p) => p.connected).length
+    const shouldRemove = connectedCount === 0 || state.phase === 'game_over'
+    await lobbyParty.get('main').fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: shouldRemove ? 'remove' : 'update',
+        room: {
+          id: room.id,
+          phase: state.phase,
+          connectedCount,
+          playerNames: Object.values(state.players).filter((p) => p.connected).map((p) => p.name),
+          wordLength: state.wordLength,
+          timerSeconds: state.timerSeconds ?? 0,
+        },
+      }),
+    })
+  } catch {
+    // best-effort — lobby ping must never break the game
+  }
+}
+
 async function load(room: Party.Room): Promise<RoomState | null> {
   return (await room.storage.get<RoomState>(STATE_KEY)) ?? null
 }
@@ -30,6 +56,7 @@ function broadcast(room: Party.Room, state: RoomState): void {
   for (const conn of room.getConnections()) {
     conn.send(JSON.stringify({ type: 'state', state: getPublicState(state, conn.id) }))
   }
+  void pingLobby(room, state)
 }
 
 function sendError(conn: Party.Connection, code: string, message: string): void {

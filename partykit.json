@@ -1,5 +1,8 @@
 {
   "name": "lingo",
   "main": "party/index.ts",
+  "parties": {
+    "lobby": "party/lobby.ts"
+  },
   "compatibilityDate": "2024-09-23"
 }
