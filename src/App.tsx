@@ -27,6 +27,12 @@ export default function App() {
   const [view, setView] = useState<'setup' | 'game'>('setup')
   const [shaking, setShaking] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem('lingo_player_name') ?? '',
+  )
+  const [nameInput, setNameInput] = useState(playerName)
+  const [editingName, setEditingName] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -295,6 +301,18 @@ export default function App() {
     return map
   }, [guesses])
 
+  function saveName() {
+    const trimmed = nameInput.trim()
+    if (trimmed) {
+      localStorage.setItem('lingo_player_name', trimmed)
+      setPlayerName(trimmed)
+      setNameInput(trimmed)
+    } else {
+      setNameInput(playerName)
+    }
+    setEditingName(false)
+  }
+
   const remainingAttempts = Math.max(
     0,
     MAX_ATTEMPTS - currentGuessIndex - (phase !== 'playing' ? 1 : 0),
@@ -311,6 +329,52 @@ export default function App() {
         {view === 'setup' ? (
           <>
             <WordLengthSetup onSelect={handleSelectLength} />
+
+            {/* Username section */}
+            <div className="w-full max-w-xs mx-auto mt-5 mb-1">
+              <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2 text-center">
+                Kullanıcı Adı
+              </div>
+              {editingName ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); saveName() }}
+                  className="flex gap-2"
+                >
+                  <input
+                    ref={nameInputRef}
+                    autoFocus
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onBlur={saveName}
+                    maxLength={20}
+                    placeholder="Adınız"
+                    className="flex-1 px-3 py-2 rounded-xl bg-zinc-800 border border-yellow-500
+                      text-white placeholder:text-zinc-500 text-sm font-semibold text-center
+                      focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-2 rounded-xl bg-yellow-500 text-black font-bold text-sm
+                      active:scale-95 transition-all"
+                  >
+                    Kaydet
+                  </button>
+                </form>
+              ) : (
+                <button
+                  onClick={() => { setEditingName(true); setNameInput(playerName) }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                    bg-zinc-800 border border-zinc-700 hover:border-zinc-500 transition-colors
+                    active:scale-95 group"
+                >
+                  <span className="text-white font-semibold text-sm">
+                    {playerName || <span className="text-zinc-500">Ad girilmedi</span>}
+                  </span>
+                  <span className="text-zinc-500 group-hover:text-zinc-300 transition-colors text-xs">✎</span>
+                </button>
+              )}
+            </div>
+
             <div className="mt-4 mb-6">
               <button
                 onClick={() => {
