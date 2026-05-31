@@ -67,6 +67,14 @@ export interface OpponentView {
   rows?: GuessRow[] // revealed only after round_over / game_over
 }
 
+// Full board info sent to spectators (both players' boards always visible)
+export interface SpectatorBoard {
+  rows: GuessRow[]
+  currentRowIndex: number
+  status: PlayerBoard['status']
+  player: PublicPlayer
+}
+
 // Everything a client receives — no targetWord during play.
 export interface PublicState {
   roomId: string
@@ -84,4 +92,6 @@ export interface PublicState {
   myVotedRematch: boolean       // has this client pressed Rematch?
   opponentVotedRematch: boolean // has the opponent pressed Rematch?
   timerSeconds: number          // seconds per turn; 0 = no timer
+  isSpectator: boolean
+  spectatorBoards?: Record<string, SpectatorBoard> // only present when isSpectator
 }

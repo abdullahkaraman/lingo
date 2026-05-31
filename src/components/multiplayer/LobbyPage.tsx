@@ -126,7 +126,6 @@ export function LobbyPage() {
 
 function RoomCard({ room, canJoin }: { room: RoomInfo; canJoin: boolean }) {
   const code  = room.id.slice(0, 8).toUpperCase()
-  const names = room.playerNames.length ? room.playerNames.join(', ') : '—'
   const timer = room.timerSeconds > 0 ? `${room.timerSeconds}s` : 'Süresiz'
   const badge = PHASE_LABEL[room.phase] ?? { text: room.phase, classes: 'bg-zinc-700 text-zinc-400' }
 
@@ -139,21 +138,25 @@ function RoomCard({ room, canJoin }: { room: RoomInfo; canJoin: boolean }) {
             {badge.text}
           </span>
         </div>
-        <div className="text-zinc-400 text-xs mt-0.5 truncate">{names}</div>
+        {/* Show player names only for joinable (waiting) rooms */}
+        {canJoin && room.playerNames.length > 0 && (
+          <div className="text-zinc-400 text-xs mt-0.5 truncate">{room.playerNames.join(', ')}</div>
+        )}
         <div className="text-zinc-600 text-xs mt-0.5">
           {room.wordLength} harf · {timer} · {room.connectedCount}/2 oyuncu
         </div>
       </div>
 
-      {canJoin && (
-        <button
-          onClick={() => { window.location.href = `?room=${room.id}` }}
-          className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500 text-black font-bold text-sm
-            active:scale-95 transition-all"
-        >
-          Katıl
-        </button>
-      )}
+      <button
+        onClick={() => { window.location.href = `?room=${room.id}` }}
+        className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all ${
+          canJoin
+            ? 'bg-yellow-500 text-black'
+            : 'bg-zinc-700 border border-zinc-600 text-zinc-300'
+        }`}
+      >
+        {canJoin ? 'Katıl' : 'İzle'}
+      </button>
     </div>
   )
 }

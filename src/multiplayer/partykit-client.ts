@@ -16,14 +16,12 @@ export class PartyKitClient implements MultiplayerClient {
   private socket: PartySocket | null = null
   private handlers = new Set<(event: ServerEvent) => void>()
   private statusHandlers = new Set<(status: ConnectionStatus) => void>()
-  private playerName = ''
 
   private notifyStatus(status: ConnectionStatus) {
     this.statusHandlers.forEach((h) => h(status))
   }
 
-  connect(roomId: string, playerId: string, playerName: string) {
-    this.playerName = playerName
+  connect(roomId: string, playerId: string, _playerName = '') {
 
     this.socket = new PartySocket({
       host: PARTYKIT_HOST,
@@ -35,7 +33,6 @@ export class PartyKitClient implements MultiplayerClient {
 
     this.socket.addEventListener('open', () => {
       this.notifyStatus('connected')
-      this.send({ type: 'join', name: this.playerName })
     })
 
     this.socket.addEventListener('message', (evt: MessageEvent<string>) => {

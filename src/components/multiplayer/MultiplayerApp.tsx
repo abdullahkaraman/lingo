@@ -4,6 +4,7 @@ import { MultiplayerEntry } from './MultiplayerEntry'
 import { MultiplayerLobby } from './MultiplayerLobby'
 import { MultiplayerGame } from './MultiplayerGame'
 import { MultiplayerRoundResult } from './MultiplayerRoundResult'
+import { SpectatorView } from './SpectatorView'
 import { PartyKitClient } from '../../multiplayer/partykit-client'
 import { useMultiplayerGame } from '../../hooks/useMultiplayerGame'
 
@@ -27,23 +28,47 @@ export function MultiplayerApp({ roomId }: Props) {
 
   const { state, error, connectionStatus, startGame, nextRound, setWordLength, setTimer, voteRematch } = useMultiplayerGame(client)
 
-  const [playerName, setPlayerName] = useState(
-    () => localStorage.getItem('lingo_player_name') ?? '',
-  )
+  const [playerName, setPlayerName] = useState('')
+  const joinedRef = useRef(false)
 
-  // Connect as soon as we have a name.
+  // Connect immediately — spectators can observe without a name.
   useEffect(() => {
-    if (!playerName) return
-    client.connect(roomId, playerId, playerName)
+    client.connect(roomId, playerId)
     return () => client.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerName])
+  }, [])
+
+  // Once we receive state, auto-join if we're a known player or have a saved name in a waiting room.
+  useEffect(() => {
+    if (!state || joinedRef.current) return
+    const savedName = localStorage.getItem('lingo_player_name') ?? ''
+
+    if (state.players[playerId]) {
+      // Server already reconnected us in onConnect — just sync the name.
+      setPlayerName(state.players[playerId].name)
+      joinedRef.current = true
+    } else if (!state.isSpectator && savedName) {
+      // Waiting room + saved name → auto-join.
+      client.send({ type: 'join', name: savedName })
+      setPlayerName(savedName)
+      joinedRef.current = true
+    }
+    // Spectators (isSpectator === true) never send join.
+  }, [state])  // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJoin(name: string) {
+    localStorage.setItem('lingo_player_name', name)
+    client.send({ type: 'join', name })
     setPlayerName(name)
+    joinedRef.current = true
   }
 
   const phase = state?.phase
+
+  // Spectator: game already in progress, this connection is not a player.
+  if (state?.isSpectator && phase !== 'waiting') {
+    return <SpectatorView state={state} />
+  }
 
   return (
     <div
@@ -62,7 +87,7 @@ export function MultiplayerApp({ roomId }: Props) {
           </div>
         )}
 
-        {!playerName && (
+        {!playerName && !state?.isSpectator && (
           <MultiplayerEntry roomId={roomId} onJoin={handleJoin} />
         )}
 

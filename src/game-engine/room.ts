@@ -224,6 +224,7 @@ export function skipTurn(state: RoomState, playerId: string): RoomState {
 
 export function getPublicState(state: RoomState, playerId: string): PublicState {
   const roundDone = state.phase === 'round_over' || state.phase === 'game_over'
+  const isSpectator = !state.players[playerId]
 
   const players: Record<string, PublicPlayer> = {}
   for (const [id, p] of Object.entries(state.players)) {
@@ -251,6 +252,32 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
 
   const opponentIds = Object.keys(state.players).filter((id) => id !== playerId)
 
+  // For spectators: expose both boards, masking only the currently-typed (unsubmitted) row
+  let spectatorBoards: PublicState['spectatorBoards']
+  if (isSpectator) {
+    spectatorBoards = {}
+    for (const [id, board] of Object.entries(state.boards)) {
+      const maskedRows = roundDone
+        ? board.rows
+        : board.rows.map((row) => {
+            if (row.submitted) return row
+            return {
+              letters: Array.from({ length: state.wordLength }, (_, j) => ({
+                char: j === 0 ? state.targetWord[0] : '',
+                status: (j === 0 ? 'correct' : 'empty') as import('./types').LetterStatus,
+              })),
+              submitted: false,
+            }
+          })
+      spectatorBoards[id] = {
+        rows: maskedRows,
+        currentRowIndex: board.currentRowIndex,
+        status: board.status,
+        player: players[id],
+      }
+    }
+  }
+
   return {
     roomId: state.id,
     phase: state.phase,
@@ -267,5 +294,7 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     myVotedRematch: state.rematchVotes.includes(playerId),
     opponentVotedRematch: opponentIds.some((id) => state.rematchVotes.includes(id)),
     timerSeconds: state.timerSeconds ?? 0,
+    isSpectator,
+    spectatorBoards,
   }
 }
