@@ -47,13 +47,13 @@ export function MultiplayerApp({ roomId }: Props) {
       // Server already reconnected us in onConnect — just sync the name.
       setPlayerName(state.players[playerId].name)
       joinedRef.current = true
-    } else if (!state.isSpectator && savedName) {
+    } else if (state.phase === 'waiting' && savedName) {
       // Waiting room + saved name → auto-join.
       client.send({ type: 'join', name: savedName })
       setPlayerName(savedName)
       joinedRef.current = true
     }
-    // Spectators (isSpectator === true) never send join.
+    // Active game + not a player → spectator, no join sent.
   }, [state])  // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJoin(name: string) {
@@ -87,7 +87,7 @@ export function MultiplayerApp({ roomId }: Props) {
           </div>
         )}
 
-        {!playerName && !state?.isSpectator && (
+        {!playerName && (phase === 'waiting' || !state) && (
           <MultiplayerEntry roomId={roomId} onJoin={handleJoin} />
         )}
 
