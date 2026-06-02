@@ -1,5 +1,7 @@
 // ── Primitives shared with the existing single-player code ───────────────────
 
+export const MAX_ATTEMPTS = 5
+
 export type WordLength = 4 | 5 | 6 | 7
 export type LetterStatus = 'correct' | 'present' | 'absent' | 'empty' | 'filled'
 

@@ -7,7 +7,7 @@ import type {
   RoomState,
   WordLength,
 } from './types'
-import { MAX_ATTEMPTS } from './guess'
+import { MAX_ATTEMPTS } from './types'
 import { pickWord } from './word'
 
 const MAX_PLAYERS = 2
@@ -198,6 +198,28 @@ export function toggleSpectators(state: RoomState): RoomState {
   return { ...state, allowSpectators: !state.allowSpectators }
 }
 
+export function advanceTurn(
+  state: RoomState,
+  playerId: string,
+  newBoards: RoomState['boards'],
+  roundOver: boolean,
+): { phase: RoomState['phase']; currentTurn: string } {
+  const isLastRound = state.round >= state.maxRounds
+  const phase: RoomState['phase'] = roundOver
+    ? isLastRound ? 'game_over' : 'round_over'
+    : 'playing'
+
+  let currentTurn = state.currentTurn
+  if (!roundOver) {
+    const otherStillGuessing = Object.keys(newBoards)
+      .filter((id) => id !== playerId)
+      .find((id) => newBoards[id].status === 'guessing')
+    if (otherStillGuessing) currentTurn = otherStillGuessing
+  }
+
+  return { phase, currentTurn }
+}
+
 export function skipTurn(state: RoomState, playerId: string): RoomState {
   if (state.phase !== 'playing') return state
   if (state.currentTurn !== playerId) return state
@@ -213,21 +235,16 @@ export function skipTurn(state: RoomState, playerId: string): RoomState {
     invalidCount: 0,
   }
 
-  const newBoards = { ...state.boards, [playerId]: newBoard }
+  let newBoards = { ...state.boards, [playerId]: newBoard }
   const roundOver = Object.values(newBoards).every((b) => b.status !== 'guessing')
-  const isLastRound = state.round >= state.maxRounds
-  const newPhase: RoomState['phase'] = roundOver
-    ? isLastRound ? 'game_over' : 'round_over'
-    : 'playing'
+  const { phase, currentTurn } = advanceTurn(state, playerId, newBoards, roundOver)
 
-  let nextTurn = state.currentTurn
-  if (!roundOver) {
-    const otherIds = Object.keys(newBoards).filter((id) => id !== playerId)
-    const otherStillGuessing = otherIds.find((id) => newBoards[id].status === 'guessing')
-    if (otherStillGuessing) nextTurn = otherStillGuessing
+  // Reset incoming player's invalidCount so their count doesn't carry over from before the skip.
+  if (!roundOver && currentTurn !== playerId && newBoards[currentTurn]) {
+    newBoards = { ...newBoards, [currentTurn]: { ...newBoards[currentTurn], invalidCount: 0 } }
   }
 
-  return { ...state, phase: newPhase, boards: newBoards, currentTurn: nextTurn }
+  return { ...state, phase, boards: newBoards, currentTurn }
 }
 
 export function getPublicState(state: RoomState, playerId: string): PublicState {

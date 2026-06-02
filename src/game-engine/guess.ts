@@ -1,11 +1,12 @@
 import type { GuessRow, LetterStatus, PlayerBoard, RoomState } from './types'
+import { MAX_ATTEMPTS } from './types'
 import { evaluateGuess as evaluate } from '../utils/evaluateGuess'
 import { isValidWord } from '../utils/dictionary'
 import { normalize } from '../utils/normalizeTurkish'
+import { advanceTurn } from './room'
 
 export { evaluate as evaluateGuess }
-
-export const MAX_ATTEMPTS = 5
+export { MAX_ATTEMPTS }
 
 const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 
@@ -21,29 +22,6 @@ const MAX_INVALID_PER_TURN = 4
 export type ApplyGuessResult =
   | { ok: false; error: string; state?: RoomState }  // state present when a counter was updated
   | { ok: true; state: RoomState; won: boolean; roundOver: boolean }
-
-// Shared helper: advance the turn after a board change (same logic used by skipTurn).
-function advanceTurn(
-  state: RoomState,
-  playerId: string,
-  newBoards: RoomState['boards'],
-  roundOver: boolean,
-): { phase: RoomState['phase']; currentTurn: string } {
-  const isLastRound = state.round >= state.maxRounds
-  const phase: RoomState['phase'] = roundOver
-    ? isLastRound ? 'game_over' : 'round_over'
-    : 'playing'
-
-  let currentTurn = state.currentTurn
-  if (!roundOver) {
-    const otherStillGuessing = Object.keys(newBoards)
-      .filter((id) => id !== playerId)
-      .find((id) => newBoards[id].status === 'guessing')
-    if (otherStillGuessing) currentTurn = otherStillGuessing
-  }
-
-  return { phase, currentTurn }
-}
 
 export function applyGuess(
   state: RoomState,

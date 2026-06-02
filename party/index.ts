@@ -54,8 +54,9 @@ async function save(room: Party.Room, state: RoomState): Promise<void> {
 }
 
 /** Send each connection its own personalised view of the room. */
-function broadcast(room: Party.Room, state: RoomState): void {
+function broadcast(room: Party.Room, state: RoomState, exclude?: string): void {
   for (const conn of room.getConnections()) {
+    if (conn.id === exclude) continue
     conn.send(JSON.stringify({ type: 'state', state: getPublicState(state, conn.id) }))
   }
   void pingLobby(room, state)
@@ -142,12 +143,7 @@ export default class LingoServer implements Party.Server {
               message: result.error,
               state: getPublicState(next, sender.id),
             }))
-            for (const conn of this.room.getConnections()) {
-              if (conn.id !== sender.id) {
-                conn.send(JSON.stringify({ type: 'state', state: getPublicState(next, conn.id) }))
-              }
-            }
-            void pingLobby(this.room, next)
+            broadcast(this.room, next, sender.id)
             return
           }
           sendError(sender, 'INVALID_GUESS', result.error)
