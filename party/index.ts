@@ -131,6 +131,11 @@ export default class LingoServer implements Party.Server {
         const result = applyGuess(state, sender.id, event.word)
         if (!result.ok) {
           sendError(sender, 'INVALID_GUESS', result.error)
+          // Persist counter updates (invalid count, auto-skip) even on error.
+          if (result.state) {
+            next = result.state
+            break
+          }
           return
         }
         next = result.state

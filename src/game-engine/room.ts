@@ -27,6 +27,7 @@ function emptyBoard(wordLength: WordLength, targetWord: string): PlayerBoard {
     })),
     currentRowIndex: 0,
     status: 'guessing',
+    invalidCount: 0,
   }
 }
 
@@ -209,6 +210,7 @@ export function skipTurn(state: RoomState, playerId: string): RoomState {
     ...board,
     currentRowIndex: exhausted ? board.currentRowIndex : board.currentRowIndex + 1,
     status: exhausted ? 'lost' : 'guessing',
+    invalidCount: 0,
   }
 
   const newBoards = { ...state.boards, [playerId]: newBoard }

@@ -28,6 +28,7 @@ export interface PlayerBoard {
   rows: GuessRow[]
   currentRowIndex: number
   status: 'guessing' | 'won' | 'lost'
+  invalidCount: number  // invalid-word submissions since last valid guess; resets on each valid guess
 }
 
 // Full server-side state — targetWord is never sent to clients during play.

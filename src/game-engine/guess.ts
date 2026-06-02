@@ -16,9 +16,34 @@ function buildRow(guess: string, statuses: LetterStatus[]): GuessRow {
   }
 }
 
+const MAX_INVALID_PER_TURN = 4
+
 export type ApplyGuessResult =
-  | { ok: false; error: string }
+  | { ok: false; error: string; state?: RoomState }  // state present when a counter was updated
   | { ok: true; state: RoomState; won: boolean; roundOver: boolean }
+
+// Shared helper: advance the turn after a board change (same logic used by skipTurn).
+function advanceTurn(
+  state: RoomState,
+  playerId: string,
+  newBoards: RoomState['boards'],
+  roundOver: boolean,
+): { phase: RoomState['phase']; currentTurn: string } {
+  const isLastRound = state.round >= state.maxRounds
+  const phase: RoomState['phase'] = roundOver
+    ? isLastRound ? 'game_over' : 'round_over'
+    : 'playing'
+
+  let currentTurn = state.currentTurn
+  if (!roundOver) {
+    const otherStillGuessing = Object.keys(newBoards)
+      .filter((id) => id !== playerId)
+      .find((id) => newBoards[id].status === 'guessing')
+    if (otherStillGuessing) currentTurn = otherStillGuessing
+  }
+
+  return { phase, currentTurn }
+}
 
 export function applyGuess(
   state: RoomState,
@@ -28,7 +53,6 @@ export function applyGuess(
   if (state.phase !== 'playing') {
     return { ok: false, error: 'Şu an aktif bir tur yok' }
   }
-
   if (state.currentTurn !== playerId) {
     return { ok: false, error: 'Sıra sende değil' }
   }
@@ -47,10 +71,51 @@ export function applyGuess(
   if (guess[0] !== target[0]) {
     return { ok: false, error: 'Kelime verilen harfle başlamalı' }
   }
-  if (!isValidWord(guess)) {
-    return { ok: false, error: 'Bu kelime sözlükte yok!' }
+
+  // ── Duplicate check (doesn't consume an attempt or count as invalid) ────────
+  const alreadySubmitted = board.rows
+    .slice(0, board.currentRowIndex)
+    .some((row) => row.submitted && row.letters.map((l) => l.char).join('') === guess)
+  if (alreadySubmitted) {
+    return { ok: false, error: 'Bu kelimeyi zaten denedin!' }
   }
 
+  // ── Invalid word ────────────────────────────────────────────────────────────
+  if (!isValidWord(guess)) {
+    const newInvalidCount = (board.invalidCount ?? 0) + 1
+
+    if (newInvalidCount > MAX_INVALID_PER_TURN) {
+      // 5th invalid word: auto-skip the turn.
+      const exhausted = board.currentRowIndex >= MAX_ATTEMPTS - 1
+      const newBoard: PlayerBoard = {
+        ...board,
+        currentRowIndex: exhausted ? board.currentRowIndex : board.currentRowIndex + 1,
+        status: exhausted ? 'lost' : 'guessing',
+        invalidCount: 0,
+      }
+      const newBoards = { ...state.boards, [playerId]: newBoard }
+      const roundOver = Object.values(newBoards).every((b) => b.status !== 'guessing')
+      const { phase, currentTurn } = advanceTurn(state, playerId, newBoards, roundOver)
+      return {
+        ok: false,
+        error: 'Çok fazla geçersiz kelime! Sıra rakibine geçti.',
+        state: { ...state, phase, boards: newBoards, currentTurn },
+      }
+    }
+
+    // Increment counter and return error.
+    const remaining = MAX_INVALID_PER_TURN - newInvalidCount
+    const newBoard: PlayerBoard = { ...board, invalidCount: newInvalidCount }
+    return {
+      ok: false,
+      error: remaining > 0
+        ? `Sözlükte yok! (${newInvalidCount}/${MAX_INVALID_PER_TURN})`
+        : `Sözlükte yok! Bir daha geçersiz kelimede sıra geçer.`,
+      state: { ...state, boards: { ...state.boards, [playerId]: newBoard } },
+    }
+  }
+
+  // ── Valid guess ─────────────────────────────────────────────────────────────
   const statuses = evaluate(guess, target)
   const won = guess === target
   const exhausted = board.currentRowIndex >= MAX_ATTEMPTS - 1
@@ -63,50 +128,22 @@ export function applyGuess(
     rows: newRows,
     currentRowIndex: won || exhausted ? board.currentRowIndex : board.currentRowIndex + 1,
     status: newStatus,
+    invalidCount: 0,  // reset on every valid submission
   }
 
   const scoreGain = won ? (ATTEMPT_SCORES[board.currentRowIndex] ?? 0) : 0
   const newBoards = { ...state.boards, [playerId]: newBoard }
   const newPlayers = {
     ...state.players,
-    [playerId]: {
-      ...state.players[playerId],
-      score: state.players[playerId].score + scoreGain,
-    },
+    [playerId]: { ...state.players[playerId], score: state.players[playerId].score + scoreGain },
   }
 
   const roundOver = won || Object.values(newBoards).every((b) => b.status !== 'guessing')
-  const isLastRound = state.round >= state.maxRounds
-  const newPhase: RoomState['phase'] = roundOver
-    ? isLastRound
-      ? 'game_over'
-      : 'round_over'
-    : 'playing'
-
-  // Advance the turn.
-  // If the round is over, currentTurn doesn't matter.
-  // If the current player is still guessing (wrong guess, has attempts left) and
-  // the other player is already done, the current player keeps going.
-  // Otherwise the turn passes to the other player (if they're still guessing).
-  let nextTurn = state.currentTurn
-  if (!roundOver) {
-    const otherIds = Object.keys(newBoards).filter((id) => id !== playerId)
-    const otherStillGuessing = otherIds.find((id) => newBoards[id].status === 'guessing')
-    if (otherStillGuessing) {
-      nextTurn = otherStillGuessing
-    }
-    // else: other player is done, current player continues (nextTurn stays)
-  }
+  const { phase, currentTurn } = advanceTurn(state, playerId, newBoards, roundOver)
 
   return {
     ok: true,
-    state: {
-      ...state,
-      phase: newPhase,
-      players: newPlayers,
-      boards: newBoards,
-      currentTurn: nextTurn,
-    },
+    state: { ...state, phase, players: newPlayers, boards: newBoards, currentTurn },
     won,
     roundOver,
   }
