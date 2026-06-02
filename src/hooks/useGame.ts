@@ -35,7 +35,7 @@ function buildActiveRow(length: number, confirmed: Record<number, string>): Gues
   return {
     letters: Array.from({ length }, (_, i) => {
       const char = confirmed[i] ?? ''
-      return { char, status: (char ? 'correct' : 'empty') as LetterStatus }
+      return { char, status: (char ? 'filled' : 'empty') as LetterStatus }
     }),
     submitted: false,
   }
@@ -185,9 +185,9 @@ export const useGame = create<GameStore>((set, get) => ({
 
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch, i) => ({
+      const letters: Letter[] = newInput.map((ch) => ({
         char: ch,
-        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })
@@ -211,9 +211,9 @@ export const useGame = create<GameStore>((set, get) => ({
 
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch, i) => ({
+      const letters: Letter[] = newInput.map((ch) => ({
         char: ch,
-        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })
@@ -293,21 +293,48 @@ export const useGame = create<GameStore>((set, get) => ({
     // ── Wrong but more attempts remain — flip, then reveal next row ───────
     set({ guesses: updatedGuesses })
     const nextIdx = currentGuessIndex + 1
-    const flipDuration = wordLength * 120 + 100
+
+    // Actual flip completes when the last tile finishes: (wordLength-1)*120 + 500 ms.
+    const actualFlipDone = (wordLength - 1) * 120 + 500
 
     setTimeout(() => {
       const { guesses: g } = get()
       const confirmed = getConfirmedLetters(g)
+
+      // Open the next row with no pre-fills; animate them in after the flip.
       const nextGuesses = g.map((row, i) =>
-        i === nextIdx ? buildActiveRow(wordLength, confirmed) : row,
+        i === nextIdx ? buildActiveRow(wordLength, {}) : row,
       )
       set({
         guesses: nextGuesses,
         currentGuessIndex: nextIdx,
-        currentInput: buildInputArray(wordLength, confirmed),
+        currentInput: buildInputArray(wordLength, {}),
         timeLeft: get().timerMax,
       })
-    }, flipDuration)
+
+      const entries = Object.entries(confirmed)
+        .map(([k, v]) => [Number(k), v] as [number, string])
+        .sort((a, b) => a[0] - b[0])
+
+      entries.forEach(([pos, char], idx) => {
+        setTimeout(() => {
+          set((state) => {
+            if (state.currentGuessIndex !== nextIdx) return {}
+            const newInput = [...state.currentInput]
+            newInput[pos] = char
+            const newGuesses = state.guesses.map((row, i) => {
+              if (i !== nextIdx) return row
+              const letters: Letter[] = newInput.map((ch) => ({
+                char: ch,
+                status: (ch ? 'filled' : 'empty') as LetterStatus,
+              }))
+              return { ...row, letters }
+            })
+            return { currentInput: newInput, guesses: newGuesses }
+          })
+        }, idx * 200)
+      })
+    }, actualFlipDone)
   },
 
   clearInput: () => {
@@ -320,9 +347,9 @@ export const useGame = create<GameStore>((set, get) => ({
 
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch, i) => ({
+      const letters: Letter[] = newInput.map((ch) => ({
         char: ch,
-        status: (confirmed[i] ? 'correct' : 'empty') as Letter['status'],
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })
@@ -342,9 +369,9 @@ export const useGame = create<GameStore>((set, get) => ({
 
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch, i) => ({
+      const letters: Letter[] = newInput.map((ch) => ({
         char: ch,
-        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })

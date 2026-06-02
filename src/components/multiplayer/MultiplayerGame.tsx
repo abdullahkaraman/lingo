@@ -29,19 +29,19 @@ function buildInputArray(wordLength: number, confirmed: Record<number, string>):
 }
 
 // Merge the locally-typed positional input into the server's board rows for display.
+// Active-row tiles are always 'filled' (no green) — submitted rows handle their own colours.
 function withLocalInput(
   rows: GuessRow[],
   rowIndex: number,
   input: string[],
-  confirmed: Record<number, string>,
 ): GuessRow[] {
   return rows.map((row, i) => {
     if (i !== rowIndex || row.submitted) return row
     return {
       ...row,
-      letters: input.map((char, j) => ({
+      letters: input.map((char) => ({
         char,
-        status: (confirmed[j] ? 'correct' : char ? 'filled' : 'empty') as LetterStatus,
+        status: (char ? 'filled' : 'empty') as LetterStatus,
       })),
     }
   })
@@ -67,31 +67,65 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   const canGuess = isMyTurn && myBoard.status === 'guessing'
   const timerActive = timerSeconds > 0
 
-  const confirmed = getConfirmedLetters(myBoard.rows)
-  const [input, setInput] = useState<string[]>(() => buildInputArray(wordLength, confirmed))
+  const [input, setInput] = useState<string[]>(() =>
+    buildInputArray(wordLength, getConfirmedLetters(myBoard.rows))
+  )
   const [shaking, setShaking] = useState(false)
   const [displayError, setDisplayError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(timerSeconds)
   const [passVisible, setPassVisible] = useState(false)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
+  const revealTimers = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  // Reset input when a new round starts or when it becomes our turn.
+  function cancelReveal() {
+    revealTimers.current.forEach(clearTimeout)
+    revealTimers.current = []
+  }
+
+  // New round: clear everything immediately (no animation needed between rounds).
   useEffect(() => {
+    cancelReveal()
     setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.round])
+
+  // Turn change: if it just became our turn, show confirmed letters immediately.
   useEffect(() => {
-    if (isMyTurn) setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
+    if (!isMyTurn) return
+    cancelReveal()
+    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentTurn, isMyTurn])
 
-  // Reset input when a guess is accepted (row index advances).
+  // Guess accepted (row index advances): wait for the flip, then animate confirmed letters in.
   const prevRowIndex = useRef(myBoard.currentRowIndex)
   useEffect(() => {
-    if (myBoard.currentRowIndex !== prevRowIndex.current) {
-      prevRowIndex.current = myBoard.currentRowIndex
-      setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
-    }
+    if (myBoard.currentRowIndex === prevRowIndex.current) return
+    prevRowIndex.current = myBoard.currentRowIndex
+
+    cancelReveal()
+    setInput(Array(wordLength).fill(''))
+
+    const confirmed = getConfirmedLetters(myBoard.rows)
+    const entries = Object.entries(confirmed)
+      .map(([k, v]) => [Number(k), v] as [number, string])
+      .sort((a, b) => a[0] - b[0])
+
+    const flipDone = (wordLength - 1) * 120 + 500
+    const stagger = 200
+
+    entries.forEach(([pos, char], idx) => {
+      const t = setTimeout(() => {
+        setInput((prev) => {
+          const next = [...prev]
+          next[pos] = char
+          return next
+        })
+      }, flipDone + idx * stagger)
+      revealTimers.current.push(t)
+    })
+
+    return cancelReveal
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myBoard.currentRowIndex])
 
@@ -204,7 +238,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     ;(e.target as HTMLInputElement).value = ' '
   }
 
-  const displayRows = withLocalInput(myBoard.rows, myBoard.currentRowIndex, input, confirmed)
+  const displayRows = withLocalInput(myBoard.rows, myBoard.currentRowIndex, input)
   const letterStatuses = computeLetterStatuses(myBoard.rows)
   const opponentEntries = Object.entries(state.opponents)
 
