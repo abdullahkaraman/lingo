@@ -18,7 +18,6 @@ const TIMER_DEFAULT = 12
 function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
   const confirmed: Record<number, string> = {}
   for (const row of rows) {
-    if (!row.submitted) continue
     row.letters.forEach((l, i) => {
       if (l.status === 'correct' && l.char) confirmed[i] = l.char
     })
