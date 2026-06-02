@@ -130,12 +130,27 @@ export default class LingoServer implements Party.Server {
       case 'guess': {
         const result = applyGuess(state, sender.id, event.word)
         if (!result.ok) {
-          sendError(sender, 'INVALID_GUESS', result.error)
-          // Persist counter updates (invalid count, auto-skip) even on error.
           if (result.state) {
+            // State changed (invalidCount bumped or auto-skip): persist and notify everyone,
+            // but deliver error + state as one atomic event to the sender so the client
+            // doesn't race between clearing the error and showing it.
             next = result.state
-            break
+            await save(this.room, next)
+            sender.send(JSON.stringify({
+              type: 'error_state',
+              code: 'INVALID_GUESS',
+              message: result.error,
+              state: getPublicState(next, sender.id),
+            }))
+            for (const conn of this.room.getConnections()) {
+              if (conn.id !== sender.id) {
+                conn.send(JSON.stringify({ type: 'state', state: getPublicState(next, conn.id) }))
+              }
+            }
+            void pingLobby(this.room, next)
+            return
           }
+          sendError(sender, 'INVALID_GUESS', result.error)
           return
         }
         next = result.state

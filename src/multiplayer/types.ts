@@ -18,3 +18,6 @@ export type ClientEvent =
 export type ServerEvent =
   | { type: 'state'; state: PublicState }
   | { type: 'error'; code: string; message: string }
+  // Sent when a guess is invalid but state still changes (e.g. invalidCount bump, auto-skip).
+  // Client must set both state and error without clearing one with the other.
+  | { type: 'error_state'; code: string; message: string; state: PublicState }

@@ -36,6 +36,9 @@ export function useMultiplayerGame(client: MultiplayerClient): {
         setError(null)
       } else if (event.type === 'error') {
         setError({ message: event.message, key: ++errorKey.current })
+      } else if (event.type === 'error_state') {
+        setState(event.state)
+        setError({ message: event.message, key: ++errorKey.current })
       }
     })
   }, [client])
