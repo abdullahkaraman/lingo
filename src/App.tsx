@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
 import { LobbyPage } from './components/multiplayer/LobbyPage'
+import { PassaparolaApp } from './components/passaparola/PassaparolaApp'
 import { GameHeader } from './components/GameHeader'
 import { GameBoard } from './components/GameBoard'
 import { Keyboard } from './components/Keyboard'
@@ -18,6 +19,7 @@ export default function App() {
   const roomId = params.get('room')
   if (roomId) return <MultiplayerApp roomId={roomId} />
   if (params.has('lobby')) return <LobbyPage />
+  if (params.has('passaparola')) return <PassaparolaApp />
   const {
     guesses, currentGuessIndex, wordLength, targetWord,
     phase, failReason, score, roundScore, errorMessage,
@@ -378,26 +380,36 @@ export default function App() {
               )}
             </div>
 
-            <div className="mt-4 mb-6 flex gap-2 justify-center">
+            <div className="mt-4 mb-6 flex flex-col gap-2 w-full max-w-xs mx-auto">
               <button
-                onClick={() => {
-                  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
-                  window.location.href = `?room=${id}`
-                }}
-                className="px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
-                  text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
+                onClick={() => { window.location.href = '?passaparola' }}
+                className="w-full px-5 py-3 rounded-xl border border-yellow-600/50 bg-yellow-900/20
+                  text-yellow-300 text-sm font-bold hover:border-yellow-500 transition-colors
                   active:scale-95"
               >
-                Oda Oluştur
+                🎯 Passaparola Modu
               </button>
-              <button
-                onClick={() => { window.location.href = '?lobby' }}
-                className="px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
-                  text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
-                  active:scale-95"
-              >
-                Aktif Odalar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+                    window.location.href = `?room=${id}`
+                  }}
+                  className="flex-1 px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
+                    text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
+                    active:scale-95"
+                >
+                  Oda Oluştur
+                </button>
+                <button
+                  onClick={() => { window.location.href = '?lobby' }}
+                  className="flex-1 px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
+                    text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
+                    active:scale-95"
+                >
+                  Aktif Odalar
+                </button>
+              </div>
             </div>
           </>
         ) : (
