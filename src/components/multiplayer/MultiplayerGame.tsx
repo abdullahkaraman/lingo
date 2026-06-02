@@ -60,6 +60,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   const [shaking, setShaking] = useState(false)
   const [displayError, setDisplayError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(timerSeconds)
+  const [passVisible, setPassVisible] = useState(false)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
 
   // Reset input when a new round starts or when it becomes our turn.
@@ -90,6 +91,14 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     const id = setTimeout(() => setTimeLeft((t) => t - 1), 1000)
     return () => clearTimeout(id)
   }, [timeLeft, timerActive, canGuess, client])
+
+  // When there's no timer: reveal the Pass button after 30 s on the player's turn.
+  useEffect(() => {
+    setPassVisible(false)
+    if (timerActive || !canGuess) return
+    const id = setTimeout(() => setPassVisible(true), 30_000)
+    return () => clearTimeout(id)
+  }, [state.currentTurn, timerActive, canGuess])
 
   // Show error, shake the board, then auto-clear after 2.5 s.
   // Watching error.key ensures the same message re-triggers on repeated invalid guesses.
@@ -202,6 +211,16 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
           ? 'Senin sıran!'
           : 'Rakibin düşünüyor…'}
       </div>
+
+      {/* Pass button — no-timer mode only, appears after 30 s */}
+      {passVisible && (
+        <button
+          onClick={() => client.send({ type: 'skip_turn' })}
+          className="w-full max-w-lg mb-2 py-2 px-4 rounded-xl text-sm font-semibold bg-zinc-700/70 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/70 hover:text-white transition-colors"
+        >
+          Pas Geç
+        </button>
+      )}
 
       {/* Turn timer */}
       {timerActive && canGuess && (
