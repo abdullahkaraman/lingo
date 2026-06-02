@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GuessRow, Letter, WordLength } from '../types/game'
+import type { GuessRow, Letter, LetterStatus, WordLength } from '../types/game'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
@@ -59,13 +59,29 @@ function pickWordByLetter(letter: string, wordLength: WordLength): string {
   return candidates[Math.floor(Math.random() * candidates.length)]
 }
 
+// ── Confirmed-letter helpers ──────────────────────────────────────────────────
+
+function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
+  const confirmed: Record<number, string> = {}
+  for (const row of rows) {
+    row.letters.forEach((l, i) => {
+      if (l.status === 'correct' && l.char) confirmed[i] = l.char
+    })
+  }
+  return confirmed
+}
+
+function buildInputArray(wordLength: WordLength, confirmed: Record<number, string>): string[] {
+  return Array.from({ length: wordLength }, (_, i) => confirmed[i] ?? '')
+}
+
 // ── Board builders ────────────────────────────────────────────────────────────
 
 function buildActiveRow(wordLength: WordLength, firstLetter: string): GuessRow {
   return {
     letters: Array.from({ length: wordLength }, (_, i) => ({
       char: i === 0 ? firstLetter : '',
-      status: (i === 0 ? 'correct' : 'empty') as Letter['status'],
+      status: (i === 0 ? 'filled' : 'empty') as Letter['status'],
     })),
     submitted: false,
   }
@@ -122,7 +138,7 @@ interface PassaparolaStore {
   targetWord: string
   guesses: GuessRow[]
   currentGuessIndex: number
-  currentInput: string
+  currentInput: string[]  // one slot per position; '' = empty
   roundScore: number
   score: number
   skipReason: SkipReason
@@ -163,7 +179,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   targetWord: '',
   guesses: [],
   currentGuessIndex: 0,
-  currentInput: '',
+  currentInput: [],
   roundScore: 0,
   score: 0,
   skipReason: null,
@@ -191,7 +207,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       targetWord,
       guesses: buildBoard(wordLength, firstLetter),
       currentGuessIndex: 0,
-      currentInput: firstLetter,
+      currentInput: buildInputArray(wordLength, { 0: firstLetter }),
       roundScore: 0,
       score: 0,
       skipReason: null,
@@ -204,18 +220,21 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   // ── Input ──────────────────────────────────────────────────────────────────
 
   typeChar: (char: string) => {
-    const { phase, wordLength, currentInput, currentGuessIndex, guesses, targetWord } = get()
+    const { phase, currentInput, currentGuessIndex, guesses } = get()
     if (phase !== 'playing') return
-    if (currentInput.length >= wordLength) return
 
-    const newInput = currentInput + normalize(char)
+    const nextPos = currentInput.findIndex((c, i) => c === '' && i !== 0)
+    if (nextPos === -1) return
+
+    const newInput = [...currentInput]
+    newInput[nextPos] = normalize(char)
+
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => {
-        if (i === 0) return { char: targetWord[0], status: 'correct' as const }
-        const ch = newInput[i] ?? ''
-        return { char: ch, status: (ch ? 'filled' : 'empty') as Letter['status'] }
-      })
+      const letters: Letter[] = newInput.map((ch) => ({
+        char: ch,
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
+      }))
       return { ...row, letters }
     })
 
@@ -223,18 +242,24 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   },
 
   deleteLast: () => {
-    const { phase, currentInput, currentGuessIndex, guesses, targetWord } = get()
+    const { phase, currentInput, currentGuessIndex, guesses } = get()
     if (phase !== 'playing') return
-    if (currentInput.length <= 1) return
 
-    const newInput = currentInput.slice(0, -1)
+    let lastPos = -1
+    for (let i = currentInput.length - 1; i >= 0; i--) {
+      if (currentInput[i] !== '' && i !== 0) { lastPos = i; break }
+    }
+    if (lastPos === -1) return
+
+    const newInput = [...currentInput]
+    newInput[lastPos] = ''
+
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => {
-        if (i === 0) return { char: targetWord[0], status: 'correct' as const }
-        const ch = newInput[i] ?? ''
-        return { char: ch, status: (ch ? 'filled' : 'empty') as Letter['status'] }
-      })
+      const letters: Letter[] = newInput.map((ch) => ({
+        char: ch,
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
+      }))
       return { ...row, letters }
     })
 
@@ -242,20 +267,22 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   },
 
   clearInput: () => {
-    const { phase, currentGuessIndex, guesses, targetWord, wordLength } = get()
+    const { phase, currentInput, currentGuessIndex, guesses } = get()
     if (phase !== 'playing') return
+
+    const newInput = currentInput.map((c, i) => i === 0 ? c : '')
+    if (newInput.every((c, i) => c === currentInput[i])) return
 
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => ({
-        char: i === 0 ? targetWord[0] : '',
-        status: (i === 0 ? 'correct' : 'empty') as Letter['status'],
+      const letters: Letter[] = newInput.map((ch) => ({
+        char: ch,
+        status: (ch ? 'filled' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })
 
-    set({ currentInput: targetWord[0], guesses: updated })
-    void wordLength // suppress unused-var lint
+    set({ currentInput: newInput, guesses: updated })
   },
 
   // ── submitGuess ────────────────────────────────────────────────────────────
@@ -268,12 +295,12 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
 
     if (phase !== 'playing') return
 
-    if ([...currentInput].length < wordLength) {
+    if (currentInput.includes('')) {
       set({ errorMessage: 'Kelimeyi tamamla!' })
       return
     }
 
-    const guess = normalize(currentInput)
+    const guess = normalize(currentInput.join(''))
     const target = normalize(targetWord)
 
     // Duplicate check
@@ -348,15 +375,45 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     // Wrong guess but more attempts remain — advance row
     set({ guesses: updatedGuesses })
     const nextIdx = currentGuessIndex + 1
-    const flipDuration = wordLength * 120 + 100
+    const flipDone = (wordLength - 1) * 120 + 500
 
     setTimeout(() => {
-      const { guesses: g, targetWord: t } = get()
+      const { guesses: g } = get()
+      const confirmed = getConfirmedLetters(g)
+
+      // Open the next row empty; animate confirmed letters in after the flip.
       const nextGuesses = g.map((row, i) =>
-        i === nextIdx ? buildActiveRow(wordLength, t[0]) : row,
+        i === nextIdx ? buildBlankRow(wordLength) : row,
       )
-      set({ guesses: nextGuesses, currentGuessIndex: nextIdx, currentInput: t[0] })
-    }, flipDuration)
+      set({
+        guesses: nextGuesses,
+        currentGuessIndex: nextIdx,
+        currentInput: Array(wordLength).fill(''),
+      })
+
+      const entries = Object.entries(confirmed)
+        .map(([k, v]) => [Number(k), v] as [number, string])
+        .sort((a, b) => a[0] - b[0])
+
+      entries.forEach(([pos, char], idx) => {
+        setTimeout(() => {
+          set((state) => {
+            if (state.phase !== 'playing' || state.currentGuessIndex !== nextIdx) return {}
+            const newInput = [...state.currentInput]
+            newInput[pos] = char
+            const newGuesses = state.guesses.map((row, i) => {
+              if (i !== nextIdx) return row
+              const letters: Letter[] = newInput.map((ch) => ({
+                char: ch,
+                status: (ch ? 'filled' : 'empty') as LetterStatus,
+              }))
+              return { ...row, letters }
+            })
+            return { currentInput: newInput, guesses: newGuesses }
+          })
+        }, idx * 200)
+      })
+    }, flipDone)
   },
 
   // ── passLetter ─────────────────────────────────────────────────────────────
@@ -424,7 +481,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       targetWord,
       guesses: buildBoard(wordLength, nextLetter),
       currentGuessIndex: 0,
-      currentInput: nextLetter,
+      currentInput: buildInputArray(wordLength, { 0: nextLetter }),
       roundScore: 0,
       skipReason: null,
       errorMessage: null,
@@ -444,7 +501,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     targetWord: '',
     guesses: [],
     currentGuessIndex: 0,
-    currentInput: '',
+    currentInput: [],
     roundScore: 0,
     score: 0,
     skipReason: null,
