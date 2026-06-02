@@ -176,8 +176,7 @@ export const useGame = create<GameStore>((set, get) => ({
     const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
     if (phase !== 'playing' || isValidating) return
 
-    const confirmed = getConfirmedLetters(guesses)
-    const nextPos = currentInput.findIndex((c, i) => c === '' && !confirmed[i])
+    const nextPos = currentInput.findIndex((c, i) => c === '' && i !== 0)
     if (nextPos === -1) return
 
     const newInput = [...currentInput]
@@ -199,10 +198,9 @@ export const useGame = create<GameStore>((set, get) => ({
     const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
     if (phase !== 'playing' || isValidating) return
 
-    const confirmed = getConfirmedLetters(guesses)
     let lastPos = -1
     for (let i = currentInput.length - 1; i >= 0; i--) {
-      if (currentInput[i] !== '' && !confirmed[i]) { lastPos = i; break }
+      if (currentInput[i] !== '' && i !== 0) { lastPos = i; break }
     }
     if (lastPos === -1) return
 
@@ -341,8 +339,7 @@ export const useGame = create<GameStore>((set, get) => ({
     const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
     if (phase !== 'playing' || isValidating) return
 
-    const confirmed = getConfirmedLetters(guesses)
-    const newInput = currentInput.map((c, i) => confirmed[i] ? c : '')
+    const newInput = currentInput.map((c, i) => i === 0 ? c : '')
     if (newInput.every((c, i) => c === currentInput[i])) return
 
     const updated = guesses.map((row, idx) => {
@@ -362,9 +359,9 @@ export const useGame = create<GameStore>((set, get) => ({
     const normalized = normalize(word)
     if ([...normalized].length !== wordLength) return
 
-    const confirmed = getConfirmedLetters(guesses)
+    const firstLetter = getConfirmedLetters(guesses)[0] ?? ''
     const newInput: string[] = Array.from({ length: wordLength }, (_, i) =>
-      confirmed[i] ?? normalized[i] ?? '',
+      i === 0 ? firstLetter : (normalized[i] ?? ''),
     )
 
     const updated = guesses.map((row, idx) => {

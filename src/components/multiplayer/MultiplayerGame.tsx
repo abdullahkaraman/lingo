@@ -196,9 +196,8 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
   const handleTypeChar = useCallback((char: string) => {
     if (!canGuess) return
-    const conf = getConfirmedLetters(myBoard.rows)
     setInput((prev) => {
-      const nextPos = prev.findIndex((c, i) => c === '' && !conf[i])
+      const nextPos = prev.findIndex((c, i) => c === '' && i !== 0)
       if (nextPos === -1) return prev
       const next = [...prev]
       next[nextPos] = char
@@ -208,10 +207,9 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
   const handleDelete = useCallback(() => {
     if (!canGuess) return
-    const conf = getConfirmedLetters(myBoard.rows)
     setInput((prev) => {
       for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i] !== '' && !conf[i]) {
+        if (prev[i] !== '' && i !== 0) {
           const next = [...prev]
           next[i] = ''
           return next
