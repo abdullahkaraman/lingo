@@ -54,7 +54,7 @@ export function PassaparolaApp() {
     const handler = (e: KeyboardEvent) => {
       if (e.target === hiddenInputRef.current) return
       if (phase !== 'playing') return
-      if (e.ctrlKey || e.altKey || e.metaKey) return
+      if (e.ctrlKey || e.metaKey) return
       if (e.key === 'Enter') { void submitGuess(); return }
       if (e.key === 'Backspace' || e.key === 'Delete') { deleteLast(); return }
       if (e.key === 'Escape') { passLetter(); return }
@@ -178,7 +178,10 @@ export function PassaparolaApp() {
       className="fixed inset-0 overflow-hidden text-white flex flex-col items-center"
       style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #09090b 60%)' }}
     >
-      <div className="w-full max-w-lg h-full flex flex-col px-3">
+      <div
+        className="w-full max-w-lg h-full flex flex-col px-3"
+        onClick={() => { if (phase === 'playing') hiddenInputRef.current?.focus() }}
+      >
         <GameHeader onRestart={() => { window.location.href = '/' }} />
 
         {/* Alphabet strip */}
