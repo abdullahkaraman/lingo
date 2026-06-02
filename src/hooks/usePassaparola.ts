@@ -16,6 +16,7 @@ export const PASSAPAROLA_ALPHABET = [
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const MAX_ATTEMPTS = 5
+const MAX_INVALID_PER_LETTER = 4
 const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 const DEFAULT_WORD_LENGTH: WordLength = 5
 
@@ -148,6 +149,9 @@ interface PassaparolaStore {
   // ── Accumulated results (populated as each letter is resolved) ─────────────
   results: LetterResult[]
 
+  // ── Invalid word tracking ──────────────────────────────────────────────────
+  invalidCount: number
+
   // ── Actions ────────────────────────────────────────────────────────────────
   startGame: (wordLength?: WordLength) => void
   typeChar: (char: string) => void
@@ -186,6 +190,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   errorMessage: null,
   isFlashingRed: false,
   results: [],
+  invalidCount: 0,
 
   // ── startGame ──────────────────────────────────────────────────────────────
 
@@ -214,6 +219,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       errorMessage: null,
       isFlashingRed: false,
       results: [],
+      invalidCount: 0,
     })
   },
 
@@ -290,7 +296,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   submitGuess: () => {
     const {
       phase, currentInput, wordLength, targetWord,
-      guesses, currentGuessIndex, score, results, queue,
+      guesses, currentGuessIndex, score, results, queue, invalidCount,
     } = get()
 
     if (phase !== 'playing') return
@@ -313,12 +319,38 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     }
 
     if (!isValidWord(guess)) {
-      const markedAbsent = guesses.map((row, idx) =>
-        idx === currentGuessIndex
-          ? { ...row, letters: row.letters.map((l) => ({ ...l, status: 'absent' as const })), submitted: true }
-          : row,
-      )
-      set({ guesses: markedAbsent, isFlashingRed: true, errorMessage: 'Bu kelime sözlükte yok!' })
+      const newInvalidCount = invalidCount + 1
+
+      if (newInvalidCount > MAX_INVALID_PER_LETTER) {
+        // 5th invalid: auto-pass the letter
+        const currentLetter = queue[0]
+        const newResult: LetterResult = {
+          letter: currentLetter,
+          targetWord,
+          solved: false,
+          attempts: currentGuessIndex,
+          score: 0,
+        }
+        set({
+          phase: 'round_skipped',
+          skipReason: 'exhausted',
+          results: [...results, newResult],
+          invalidCount: 0,
+          isFlashingRed: true,
+          errorMessage: 'Çok fazla geçersiz kelime!',
+        })
+        setTimeout(() => set({ isFlashingRed: false }), 700)
+        return
+      }
+
+      const remaining = MAX_INVALID_PER_LETTER - newInvalidCount
+      set({
+        invalidCount: newInvalidCount,
+        isFlashingRed: true,
+        errorMessage: remaining > 0
+          ? `Sözlükte yok! (${newInvalidCount}/${MAX_INVALID_PER_LETTER})`
+          : `Sözlükte yok! Bir daha geçersiz kelimede pas geçilir.`,
+      })
       setTimeout(() => set({ isFlashingRed: false }), 700)
       return
     }
@@ -349,6 +381,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
         score: score + roundScore,
         skipReason: null,
         results: [...results, newResult],
+        invalidCount: 0,
       })
       return
     }
@@ -368,12 +401,13 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
         phase: 'round_skipped',
         skipReason: 'exhausted',
         results: [...results, newResult],
+        invalidCount: 0,
       })
       return
     }
 
     // Wrong guess but more attempts remain — advance row
-    set({ guesses: updatedGuesses })
+    set({ guesses: updatedGuesses, invalidCount: 0 })
     const nextIdx = currentGuessIndex + 1
     const flipDone = (wordLength - 1) * 120 + 500
 
@@ -486,6 +520,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       skipReason: null,
       errorMessage: null,
       isFlashingRed: false,
+      invalidCount: 0,
     })
   },
 
@@ -508,5 +543,6 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     errorMessage: null,
     isFlashingRed: false,
     results: [],
+    invalidCount: 0,
   }),
 }))
