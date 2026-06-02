@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GameState, GuessRow, Letter, WordLength } from '../types/game'
+import type { GameState, GuessRow, Letter, LetterStatus, WordLength } from '../types/game'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
@@ -13,14 +13,31 @@ export const MAX_ATTEMPTS = 5
 
 const TIMER_DEFAULT = 12
 
+// ── Confirmed-letter helpers ─────────────────────────────────────────────────
+
+function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
+  const confirmed: Record<number, string> = {}
+  for (const row of rows) {
+    if (!row.submitted) continue
+    row.letters.forEach((l, i) => {
+      if (l.status === 'correct' && l.char) confirmed[i] = l.char
+    })
+  }
+  return confirmed
+}
+
+function buildInputArray(length: number, confirmed: Record<number, string>): string[] {
+  return Array.from({ length }, (_, i) => confirmed[i] ?? '')
+}
+
 // ── Row builders ────────────────────────────────────────────────────────────
 
-function buildActiveRow(length: number, firstLetter: string): GuessRow {
+function buildActiveRow(length: number, confirmed: Record<number, string>): GuessRow {
   return {
-    letters: Array.from({ length }, (_, i) => ({
-      char: i === 0 ? firstLetter : '',
-      status: i === 0 ? ('correct' as const) : ('empty' as const),
-    })),
+    letters: Array.from({ length }, (_, i) => {
+      const char = confirmed[i] ?? ''
+      return { char, status: (char ? 'correct' : 'empty') as LetterStatus }
+    }),
     submitted: false,
   }
 }
@@ -89,8 +106,9 @@ function pickLocalWord(wordLength: WordLength, wordsPlayed: number): string {
 }
 
 function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
+  const confirmed = { 0: firstLetter }
   return Array.from({ length: MAX_ATTEMPTS }, (_, i) =>
-    i === 0 ? buildActiveRow(wordLength, firstLetter) : buildBlankRow(wordLength),
+    i === 0 ? buildActiveRow(wordLength, confirmed) : buildBlankRow(wordLength),
   )
 }
 
@@ -102,6 +120,7 @@ interface GameStore extends GameState {
   typeChar: (char: string) => void
   deleteLast: () => void
   clearInput: () => void
+  setVoiceInput: (word: string) => void
   submitGuess: () => Promise<void>
   clearError: () => void
   tickTimer: () => void
@@ -113,7 +132,7 @@ export const useGame = create<GameStore>((set, get) => ({
   targetWord: '',
   guesses: [],
   currentGuessIndex: 0,
-  currentInput: '',
+  currentInput: [],
   phase: 'playing',
   score: 0,
   roundScore: 0,
@@ -137,7 +156,7 @@ export const useGame = create<GameStore>((set, get) => ({
       targetWord,
       guesses: buildInitialBoard(wordLength, firstLetter),
       currentGuessIndex: 0,
-      currentInput: firstLetter,
+      currentInput: buildInputArray(wordLength, { 0: firstLetter }),
       phase: 'playing',
       roundScore: 0,
       errorMessage: null,
@@ -155,18 +174,22 @@ export const useGame = create<GameStore>((set, get) => ({
   },
 
   typeChar: (char: string) => {
-    const { phase, wordLength, currentInput, currentGuessIndex, guesses, targetWord, isValidating } = get()
+    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
     if (phase !== 'playing' || isValidating) return
-    if (currentInput.length >= wordLength) return
 
-    const newInput = currentInput + normalize(char)
+    const confirmed = getConfirmedLetters(guesses)
+    const nextPos = currentInput.findIndex((c, i) => c === '' && !confirmed[i])
+    if (nextPos === -1) return
+
+    const newInput = [...currentInput]
+    newInput[nextPos] = normalize(char)
+
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => {
-        if (i === 0) return { char: targetWord[0], status: 'correct' as const }
-        const ch = newInput[i] ?? ''
-        return { char: ch, status: ch ? ('filled' as const) : ('empty' as const) }
-      })
+      const letters: Letter[] = newInput.map((ch, i) => ({
+        char: ch,
+        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+      }))
       return { ...row, letters }
     })
 
@@ -174,18 +197,25 @@ export const useGame = create<GameStore>((set, get) => ({
   },
 
   deleteLast: () => {
-    const { phase, currentInput, currentGuessIndex, guesses, targetWord, isValidating } = get()
+    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
     if (phase !== 'playing' || isValidating) return
-    if (currentInput.length <= 1) return
 
-    const newInput = currentInput.slice(0, -1)
+    const confirmed = getConfirmedLetters(guesses)
+    let lastPos = -1
+    for (let i = currentInput.length - 1; i >= 0; i--) {
+      if (currentInput[i] !== '' && !confirmed[i]) { lastPos = i; break }
+    }
+    if (lastPos === -1) return
+
+    const newInput = [...currentInput]
+    newInput[lastPos] = ''
+
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => {
-        if (i === 0) return { char: targetWord[0], status: 'correct' as const }
-        const ch = newInput[i] ?? ''
-        return { char: ch, status: ch ? ('filled' as const) : ('empty' as const) }
-      })
+      const letters: Letter[] = newInput.map((ch, i) => ({
+        char: ch,
+        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+      }))
       return { ...row, letters }
     })
 
@@ -200,12 +230,12 @@ export const useGame = create<GameStore>((set, get) => ({
 
     if (phase !== 'playing' || isValidating) return
 
-    if ([...currentInput].length < wordLength) {
+    if (currentInput.includes('')) {
       set({ errorMessage: 'Kelimeyi tamamla!' })
       return
     }
 
-    const guess = normalize(currentInput)
+    const guess = normalize(currentInput.join(''))
     const target = normalize(targetWord)
 
     // ── Duplicate guess check ─────────────────────────────────────────────
@@ -267,31 +297,59 @@ export const useGame = create<GameStore>((set, get) => ({
     const flipDuration = wordLength * 120 + 100
 
     setTimeout(() => {
-      const { guesses: g, targetWord: t } = get()
+      const { guesses: g } = get()
+      const confirmed = getConfirmedLetters(g)
       const nextGuesses = g.map((row, i) =>
-        i === nextIdx ? buildActiveRow(wordLength, t[0]) : row,
+        i === nextIdx ? buildActiveRow(wordLength, confirmed) : row,
       )
       set({
         guesses: nextGuesses,
         currentGuessIndex: nextIdx,
-        currentInput: t[0],
+        currentInput: buildInputArray(wordLength, confirmed),
         timeLeft: get().timerMax,
       })
     }, flipDuration)
   },
 
   clearInput: () => {
-    const { phase, currentInput, currentGuessIndex, guesses, targetWord, isValidating } = get()
-    if (phase !== 'playing' || isValidating || currentInput.length <= 1) return
+    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
+    if (phase !== 'playing' || isValidating) return
+
+    const confirmed = getConfirmedLetters(guesses)
+    const newInput = currentInput.map((c, i) => confirmed[i] ? c : '')
+    if (newInput.every((c, i) => c === currentInput[i])) return
+
     const updated = guesses.map((row, idx) => {
       if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = row.letters.map((_, i) => ({
-        char: i === 0 ? targetWord[0] : '',
-        status: i === 0 ? ('correct' as const) : ('empty' as const),
+      const letters: Letter[] = newInput.map((ch, i) => ({
+        char: ch,
+        status: (confirmed[i] ? 'correct' : 'empty') as Letter['status'],
       }))
       return { ...row, letters }
     })
-    set({ currentInput: targetWord[0], guesses: updated })
+    set({ currentInput: newInput, guesses: updated })
+  },
+
+  setVoiceInput: (word: string) => {
+    const { phase, wordLength, currentGuessIndex, guesses, isValidating } = get()
+    if (phase !== 'playing' || isValidating) return
+    const normalized = normalize(word)
+    if ([...normalized].length !== wordLength) return
+
+    const confirmed = getConfirmedLetters(guesses)
+    const newInput: string[] = Array.from({ length: wordLength }, (_, i) =>
+      confirmed[i] ?? normalized[i] ?? '',
+    )
+
+    const updated = guesses.map((row, idx) => {
+      if (idx !== currentGuessIndex) return row
+      const letters: Letter[] = newInput.map((ch, i) => ({
+        char: ch,
+        status: (confirmed[i] ? 'correct' : ch ? 'filled' : 'empty') as Letter['status'],
+      }))
+      return { ...row, letters }
+    })
+    set({ currentInput: newInput, guesses: updated, errorMessage: null })
   },
 
   clearError: () => set({ errorMessage: null }),

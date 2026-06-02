@@ -212,11 +212,10 @@ export default function App() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       const store = useGame.getState()
-      const { wordLength, currentInput } = store
+      const { wordLength } = store
 
       console.group('[Voice Input] Result received')
       console.log('wordLength expected:', wordLength)
-      console.log('currentInput at result time:', currentInput)
       console.log('raw event.results:', event.results)
       console.log('result count:', event.results.length)
       console.log('alternatives in result[0]:', event.results[0].length)
@@ -272,16 +271,11 @@ export default function App() {
 
       console.log('[Voice Input] Final accepted word:', matched)
 
-      // Clear everything after the locked first letter, then type the rest
-      const charsToDelete = currentInput.length - 1
-      console.log('[Voice Input] Deleting', charsToDelete, 'chars before typing new word')
-      for (let i = 0; i < charsToDelete; i++) useGame.getState().deleteLast()
+      // Fill all positions at once, respecting already-confirmed letters
+      console.log('[Voice Input] Setting voice input word:', matched)
+      useGame.getState().setVoiceInput(matched)
 
-      const charsToType = [...matched].slice(1)
-      console.log('[Voice Input] Typing chars into row:', charsToType)
-      for (let i = 1; i < [...matched].length; i++) useGame.getState().typeChar(matched[i])
-
-      console.log('[Voice Input] Word written into row. currentInput is now:', useGame.getState().currentInput)
+      console.log('[Voice Input] Word written into row:', useGame.getState().currentInput.join(''))
       console.groupEnd()
     }
 

@@ -14,24 +14,36 @@ interface Props {
   client: MultiplayerClient
 }
 
-// Merge the locally-typed input into the server's board rows for display.
+function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
+  const confirmed: Record<number, string> = {}
+  for (const row of rows) {
+    if (!row.submitted) continue
+    row.letters.forEach((l, i) => {
+      if (l.status === 'correct' && l.char) confirmed[i] = l.char
+    })
+  }
+  return confirmed
+}
+
+function buildInputArray(wordLength: number, confirmed: Record<number, string>): string[] {
+  return Array.from({ length: wordLength }, (_, i) => confirmed[i] ?? '')
+}
+
+// Merge the locally-typed positional input into the server's board rows for display.
 function withLocalInput(
   rows: GuessRow[],
   rowIndex: number,
-  input: string,
-  wordLength: number,
+  input: string[],
+  confirmed: Record<number, string>,
 ): GuessRow[] {
   return rows.map((row, i) => {
     if (i !== rowIndex || row.submitted) return row
     return {
       ...row,
-      letters: Array.from({ length: wordLength }, (_, j) => {
-        const char = input[j] ?? ''
-        return {
-          char,
-          status: (j === 0 ? 'correct' : char ? 'filled' : 'empty') as LetterStatus,
-        }
-      }),
+      letters: input.map((char, j) => ({
+        char,
+        status: (confirmed[j] ? 'correct' : char ? 'filled' : 'empty') as LetterStatus,
+      })),
     }
   })
 }
@@ -52,11 +64,12 @@ function computeLetterStatuses(rows: GuessRow[]): Record<string, string> {
 }
 
 export function MultiplayerGame({ state, myId, error, client }: Props) {
-  const { isMyTurn, myBoard, wordLength, firstLetter, players, timerSeconds } = state
+  const { isMyTurn, myBoard, wordLength, players, timerSeconds } = state
   const canGuess = isMyTurn && myBoard.status === 'guessing'
   const timerActive = timerSeconds > 0
 
-  const [input, setInput] = useState(firstLetter)
+  const confirmed = getConfirmedLetters(myBoard.rows)
+  const [input, setInput] = useState<string[]>(() => buildInputArray(wordLength, confirmed))
   const [shaking, setShaking] = useState(false)
   const [displayError, setDisplayError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(timerSeconds)
@@ -64,17 +77,24 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   const hiddenInputRef = useRef<HTMLInputElement>(null)
 
   // Reset input when a new round starts or when it becomes our turn.
-  useEffect(() => { setInput(firstLetter) }, [state.round, firstLetter])
-  useEffect(() => { if (isMyTurn) setInput(firstLetter) }, [state.currentTurn, isMyTurn, firstLetter])
+  useEffect(() => {
+    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.round])
+  useEffect(() => {
+    if (isMyTurn) setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentTurn, isMyTurn])
 
   // Reset input when a guess is accepted (row index advances).
   const prevRowIndex = useRef(myBoard.currentRowIndex)
   useEffect(() => {
     if (myBoard.currentRowIndex !== prevRowIndex.current) {
       prevRowIndex.current = myBoard.currentRowIndex
-      setInput(firstLetter)
+      setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
     }
-  }, [myBoard.currentRowIndex, firstLetter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myBoard.currentRowIndex])
 
   // Reset and run countdown timer when it's our turn.
   useEffect(() => {
@@ -143,18 +163,35 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
 
   const handleTypeChar = useCallback((char: string) => {
     if (!canGuess) return
-    setInput((prev) => [...prev].length < wordLength ? prev + char : prev)
-  }, [canGuess, wordLength])
+    const conf = getConfirmedLetters(myBoard.rows)
+    setInput((prev) => {
+      const nextPos = prev.findIndex((c, i) => c === '' && !conf[i])
+      if (nextPos === -1) return prev
+      const next = [...prev]
+      next[nextPos] = char
+      return next
+    })
+  }, [canGuess, myBoard.rows])
 
   const handleDelete = useCallback(() => {
     if (!canGuess) return
-    setInput((prev) => [...prev].length <= 1 ? firstLetter : [...prev].slice(0, -1).join(''))
-  }, [canGuess, firstLetter])
+    const conf = getConfirmedLetters(myBoard.rows)
+    setInput((prev) => {
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i] !== '' && !conf[i]) {
+          const next = [...prev]
+          next[i] = ''
+          return next
+        }
+      }
+      return prev
+    })
+  }, [canGuess, myBoard.rows])
 
   const handleSubmit = useCallback(() => {
-    if (!canGuess || [...input].length < wordLength) return
-    client.send({ type: 'guess', word: input })
-  }, [canGuess, input, wordLength, client])
+    if (!canGuess || input.includes('')) return
+    client.send({ type: 'guess', word: input.join('') })
+  }, [canGuess, input, client])
 
   function handleNativeInput(e: React.FormEvent<HTMLInputElement>) {
     if (!canGuess) return
@@ -168,7 +205,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     ;(e.target as HTMLInputElement).value = ' '
   }
 
-  const displayRows = withLocalInput(myBoard.rows, myBoard.currentRowIndex, input, wordLength)
+  const displayRows = withLocalInput(myBoard.rows, myBoard.currentRowIndex, input, confirmed)
   const letterStatuses = computeLetterStatuses(myBoard.rows)
   const opponentEntries = Object.entries(state.opponents)
 

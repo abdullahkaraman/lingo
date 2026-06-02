@@ -22,7 +22,7 @@ export interface GameState {
   targetWord: string
   guesses: GuessRow[]
   currentGuessIndex: number
-  currentInput: string
+  currentInput: string[]  // one slot per position; '' = empty, pre-filled for confirmed letters
   phase: GamePhase
   score: number
   roundScore: number
