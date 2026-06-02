@@ -48,6 +48,7 @@ export interface RoomState {
   rematchCount: number       // 0 = original game, 1 = first rematch, …
   rematchVotes: string[]     // playerIds who have pressed "Rematch"
   timerSeconds: number       // seconds per turn; 0 = no timer
+  allowSpectators: boolean
 }
 
 // ── Client-visible shapes ─────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ export interface PublicState {
   myVotedRematch: boolean       // has this client pressed Rematch?
   opponentVotedRematch: boolean // has the opponent pressed Rematch?
   timerSeconds: number          // seconds per turn; 0 = no timer
+  allowSpectators: boolean
   isSpectator: boolean
   spectatorBoards?: Record<string, SpectatorBoard> // only present when isSpectator
 }

@@ -11,6 +11,7 @@ export interface MultiplayerGameActions {
   setTimer: (timerSeconds: number) => void
   skipTurn: () => void
   voteRematch: () => void
+  toggleSpectators: () => void
 }
 
 export interface GameError {
@@ -78,5 +79,10 @@ export function useMultiplayerGame(client: MultiplayerClient): {
     [client],
   )
 
-  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength, setTimer, skipTurn, voteRematch }
+  const toggleSpectators = useCallback(
+    () => client.send({ type: 'toggle_spectators' }),
+    [client],
+  )
+
+  return { state, error, connectionStatus, sendGuess, startGame, nextRound, setWordLength, setTimer, skipTurn, voteRematch, toggleSpectators }
 }

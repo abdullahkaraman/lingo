@@ -9,6 +9,7 @@ interface RoomInfo {
   playerNames: string[]
   wordLength: number
   timerSeconds: number
+  allowSpectators: boolean
   updatedAt: number
 }
 
@@ -103,7 +104,7 @@ export function LobbyPage() {
                 Oyun devam ediyor
               </div>
               {activeRooms.map((r) => (
-                <RoomCard key={r.id} room={r} canJoin={false} />
+                <RoomCard key={r.id} room={r} canJoin={false} canWatch={r.allowSpectators} />
               ))}
             </>
           )}
@@ -124,7 +125,7 @@ export function LobbyPage() {
   )
 }
 
-function RoomCard({ room, canJoin }: { room: RoomInfo; canJoin: boolean }) {
+function RoomCard({ room, canJoin, canWatch = true }: { room: RoomInfo; canJoin: boolean; canWatch?: boolean }) {
   const code  = room.id.slice(0, 8).toUpperCase()
   const timer = room.timerSeconds > 0 ? `${room.timerSeconds}s` : 'Süresiz'
   const badge = PHASE_LABEL[room.phase] ?? { text: room.phase, classes: 'bg-zinc-700 text-zinc-400' }
@@ -137,6 +138,11 @@ function RoomCard({ room, canJoin }: { room: RoomInfo; canJoin: boolean }) {
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badge.classes}`}>
             {badge.text}
           </span>
+          {!canJoin && !canWatch && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-600 border border-zinc-700">
+              🔒 Özel
+            </span>
+          )}
         </div>
         {/* Show player names only for joinable (waiting) rooms */}
         {canJoin && room.playerNames.length > 0 && (
@@ -147,16 +153,21 @@ function RoomCard({ room, canJoin }: { room: RoomInfo; canJoin: boolean }) {
         </div>
       </div>
 
-      <button
-        onClick={() => { window.location.href = `?room=${room.id}` }}
-        className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all ${
-          canJoin
-            ? 'bg-yellow-500 text-black'
-            : 'bg-zinc-700 border border-zinc-600 text-zinc-300'
-        }`}
-      >
-        {canJoin ? 'Katıl' : 'İzle'}
-      </button>
+      {canJoin ? (
+        <button
+          onClick={() => { window.location.href = `?room=${room.id}` }}
+          className="shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all bg-yellow-500 text-black"
+        >
+          Katıl
+        </button>
+      ) : canWatch ? (
+        <button
+          onClick={() => { window.location.href = `?room=${room.id}` }}
+          className="shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all bg-zinc-700 border border-zinc-600 text-zinc-300"
+        >
+          İzle
+        </button>
+      ) : null}
     </div>
   )
 }

@@ -55,6 +55,7 @@ export function createRoomState(
     rematchCount: 0,
     rematchVotes: [],
     timerSeconds: 0,
+    allowSpectators: false,
   }
 }
 
@@ -176,7 +177,7 @@ export function startNextRound(state: RoomState): RoomState {
 export function setWordLength(state: RoomState, wordLength: WordLength): RoomState {
   if (state.phase !== 'waiting') return state
   const savedPlayers = state.players
-  const next = { ...createRoomState(state.id, state.hostId, wordLength, state.maxRounds), timerSeconds: state.timerSeconds }
+  const next = { ...createRoomState(state.id, state.hostId, wordLength, state.maxRounds), timerSeconds: state.timerSeconds, allowSpectators: state.allowSpectators }
   // Re-add all players with their existing names and scores.
   let s = next
   for (const [id, p] of Object.entries(savedPlayers)) {
@@ -189,6 +190,11 @@ export function setWordLength(state: RoomState, wordLength: WordLength): RoomSta
 export function setTimer(state: RoomState, timerSeconds: number): RoomState {
   if (state.phase !== 'waiting') return state
   return { ...state, timerSeconds }
+}
+
+export function toggleSpectators(state: RoomState): RoomState {
+  if (state.phase !== 'waiting') return state
+  return { ...state, allowSpectators: !state.allowSpectators }
 }
 
 export function skipTurn(state: RoomState, playerId: string): RoomState {
@@ -294,6 +300,7 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
     myVotedRematch: state.rematchVotes.includes(playerId),
     opponentVotedRematch: opponentIds.some((id) => state.rematchVotes.includes(id)),
     timerSeconds: state.timerSeconds ?? 0,
+    allowSpectators: state.allowSpectators,
     isSpectator,
     spectatorBoards,
   }

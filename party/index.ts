@@ -10,6 +10,7 @@ import {
   skipTurn,
   startGame,
   startNextRound,
+  toggleSpectators,
   voteRematch,
 } from '../src/game-engine'
 import type { RoomState } from '../src/game-engine/types'
@@ -35,6 +36,7 @@ async function pingLobby(room: Party.Room, state: RoomState): Promise<void> {
           playerNames: Object.values(state.players).filter((p) => p.connected).map((p) => p.name),
           wordLength: state.wordLength,
           timerSeconds: state.timerSeconds ?? 0,
+          allowSpectators: state.allowSpectators,
         },
       }),
     })
@@ -185,6 +187,15 @@ export default class LingoServer implements Party.Server {
           return
         }
         next = voteRematch(state, sender.id)
+        break
+      }
+
+      case 'toggle_spectators': {
+        if (sender.id !== state.hostId) {
+          sendError(sender, 'FORBIDDEN', 'Sadece host seyirci ayarını değiştirebilir')
+          return
+        }
+        next = toggleSpectators(state)
         break
       }
     }

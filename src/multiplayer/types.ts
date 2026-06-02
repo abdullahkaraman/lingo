@@ -11,6 +11,7 @@ export type ClientEvent =
   | { type: 'set_timer'; timerSeconds: number }
   | { type: 'skip_turn' }
   | { type: 'rematch_vote' }
+  | { type: 'toggle_spectators' }
 
 // ── Server → Client ───────────────────────────────────────────────────────────
 

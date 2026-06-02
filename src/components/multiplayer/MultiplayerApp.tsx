@@ -26,7 +26,7 @@ export function MultiplayerApp({ roomId }: Props) {
   const clientRef = useRef(new PartyKitClient())
   const client = clientRef.current
 
-  const { state, error, connectionStatus, startGame, nextRound, setWordLength, setTimer, voteRematch } = useMultiplayerGame(client)
+  const { state, error, connectionStatus, startGame, nextRound, setWordLength, setTimer, voteRematch, toggleSpectators } = useMultiplayerGame(client)
 
   const [playerName, setPlayerName] = useState('')
   const joinedRef = useRef(false)
@@ -67,6 +67,27 @@ export function MultiplayerApp({ roomId }: Props) {
 
   // Spectator: game already in progress, this connection is not a player.
   if (state?.isSpectator && phase !== 'waiting') {
+    if (!state.allowSpectators) {
+      return (
+        <div
+          className="fixed inset-0 overflow-hidden text-white flex flex-col items-center justify-center"
+          style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #09090b 60%)' }}
+        >
+          <div className="text-center px-6 max-w-sm">
+            <div className="text-4xl mb-4">🔒</div>
+            <div className="text-lg font-bold mb-2">Bu oda özel</div>
+            <div className="text-zinc-400 text-sm mb-6">Seyircilere kapalı bir oyun devam ediyor.</div>
+            <button
+              onClick={() => { window.location.href = '/' }}
+              className="px-6 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700
+                text-zinc-300 font-semibold text-sm active:scale-95 transition-all"
+            >
+              ← Ana Sayfaya Dön
+            </button>
+          </div>
+        </div>
+      )
+    }
     return <SpectatorView state={state} />
   }
 
@@ -98,14 +119,17 @@ export function MultiplayerApp({ roomId }: Props) {
         )}
 
         {state && phase === 'waiting' && (
-          <MultiplayerLobby
-            state={state}
-            myId={playerId}
-            roomId={roomId}
-            onStart={startGame}
-            onSetWordLength={setWordLength}
-            onSetTimer={setTimer}
-          />
+          <div className="w-full flex-1 overflow-y-auto min-h-0">
+            <MultiplayerLobby
+              state={state}
+              myId={playerId}
+              roomId={roomId}
+              onStart={startGame}
+              onSetWordLength={setWordLength}
+              onSetTimer={setTimer}
+              onToggleSpectators={toggleSpectators}
+            />
+          </div>
         )}
 
         {state && phase === 'playing' && (

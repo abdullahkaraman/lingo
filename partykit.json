@@ -4,5 +4,6 @@
   "parties": {
     "lobby": "party/lobby.ts"
   },
+  "serve": "dist",
   "compatibilityDate": "2024-09-23"
 }

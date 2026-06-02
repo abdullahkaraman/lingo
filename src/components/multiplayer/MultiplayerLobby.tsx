@@ -8,12 +8,13 @@ interface Props {
   onStart: () => void
   onSetWordLength: (wl: WordLength) => void
   onSetTimer: (seconds: number) => void
+  onToggleSpectators: () => void
 }
 
 const LENGTHS: WordLength[] = [4, 5, 6, 7]
 const TIMER_OPTIONS = [0, 10, 15, 20, 25, 30]
 
-export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength, onSetTimer }: Props) {
+export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength, onSetTimer, onToggleSpectators }: Props) {
   const [copied, setCopied] = useState(false)
   const isHost = state.players[myId]?.isHost
   const players = Object.values(state.players)
@@ -29,7 +30,7 @@ export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 px-6 pt-8 w-full max-w-sm mx-auto">
+    <div className="flex flex-col items-center gap-6 px-6 pt-8 pb-8 w-full max-w-sm mx-auto">
       <div className="text-center">
         <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-1">Oda bağlantısını paylaş</div>
         <button
@@ -100,6 +101,23 @@ export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="w-full">
+            <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Seyirci modu</div>
+            <button
+              onClick={onToggleSpectators}
+              className={`w-full py-2.5 rounded-xl font-bold text-sm border transition-all active:scale-95 flex items-center justify-between px-4 ${
+                state.allowSpectators
+                  ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
+                  : 'bg-zinc-800 border-zinc-600 text-zinc-400'
+              }`}
+            >
+              <span>{state.allowSpectators ? 'Açık — üçüncü kişiler izleyebilir' : 'Kapalı — sadece oyuncular girebilir'}</span>
+              <span className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                state.allowSpectators ? 'bg-blue-400 border-blue-300' : 'bg-zinc-700 border-zinc-600'
+              }`} />
+            </button>
           </div>
         </>
       )}
