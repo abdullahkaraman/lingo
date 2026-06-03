@@ -52,19 +52,19 @@ export function PassaparolaApp() {
   // ── Physical keyboard ────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target === hiddenInputRef.current) return
       if (phase !== 'playing') return
       if (e.ctrlKey || e.metaKey) return
+      if (e.key === 'Tab') { e.preventDefault(); passLetter(); return }
+      if (e.target === hiddenInputRef.current) return
       if (e.key === 'Enter') { void submitGuess(); return }
       if (e.key === 'Backspace' || e.key === 'Delete') { deleteLast(); return }
-      if (e.key === 'Escape') { passLetter(); return }
       if (e.key.length === 1) {
         const upper = e.key.toLocaleUpperCase('tr-TR')
         if (VALID_LETTERS.has(upper)) typeChar(upper)
       }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('keydown', handler, { capture: true })
+    return () => window.removeEventListener('keydown', handler, { capture: true })
   }, [phase, typeChar, deleteLast, submitGuess, passLetter])
 
   // ── Mobile keyboard ──────────────────────────────────────────────────────────
@@ -316,7 +316,7 @@ export function PassaparolaApp() {
               text-zinc-400 font-bold text-sm active:scale-95 transition-all
               disabled:opacity-30"
           >
-            Pas geç → <span className="text-zinc-600 text-xs">(Esc)</span>
+            Pas geç → <span className="text-zinc-600 text-xs">(Tab)</span>
           </button>
           <Keyboard
             onKey={typeChar}
