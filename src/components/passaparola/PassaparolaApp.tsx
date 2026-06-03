@@ -256,7 +256,7 @@ export function PassaparolaApp() {
                 <>
                   <div className="text-5xl mb-2">{skipReason === 'passed' ? '→' : '✗'}</div>
                   <div className="text-orange-400 text-lg font-bold mb-1">
-                    {skipReason === 'passed' ? 'Pas Geçildi' : 'Bilemedин'}
+                    {skipReason === 'passed' ? 'Pas Geçildi' : 'Bilemedin'}
                   </div>
                   <div className="text-zinc-400 text-xs mb-1">Doğru kelime</div>
                   <div className="text-white font-mono text-2xl font-bold tracking-widest mb-6">
