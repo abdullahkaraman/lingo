@@ -26,7 +26,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   const timerActive = timerSeconds > 0
 
   const [input, setInput] = useState<string[]>(() =>
-    buildInputArray(wordLength, getConfirmedLetters(myBoard.rows))
+    buildInputArray(wordLength, getConfirmedLetters(myBoard.rows, state.firstLetter))
   )
   const [shaking, setShaking] = useState(false)
   const [displayError, setDisplayError] = useState<string | null>(null)
@@ -42,7 +42,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   // New round: clear everything immediately (no animation needed between rounds).
   useEffect(() => {
     cancelReveal()
-    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
+    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows, state.firstLetter)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.round])
 
@@ -50,7 +50,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   useEffect(() => {
     if (!isMyTurn) return
     cancelReveal()
-    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows)))
+    setInput(buildInputArray(wordLength, getConfirmedLetters(myBoard.rows, state.firstLetter)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentTurn, isMyTurn])
 
@@ -61,9 +61,9 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     prevRowIndex.current = myBoard.currentRowIndex
 
     cancelReveal()
-    setInput(Array(wordLength).fill(''))
+    const confirmed = getConfirmedLetters(myBoard.rows, state.firstLetter)
+    setInput(buildInputArray(wordLength, confirmed))
 
-    const confirmed = getConfirmedLetters(myBoard.rows)
     const entries = Object.entries(confirmed)
       .map(([k, v]) => [Number(k), v] as [number, string])
       .sort((a, b) => a[0] - b[0])

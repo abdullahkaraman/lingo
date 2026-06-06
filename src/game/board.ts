@@ -5,8 +5,11 @@ import { MAX_ATTEMPTS } from './constants'
  * Extract confirmed (correct) letters from already-submitted rows.
  * Returns a map of position -> character.
  */
-export function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
+export function getConfirmedLetters(rows: GuessRow[], firstLetter?: string): Record<number, string> {
   const confirmed: Record<number, string> = {}
+  if (firstLetter) {
+    confirmed[0] = firstLetter
+  }
   for (const row of rows) {
     if (!row.submitted) continue
     row.letters.forEach((l, i) => {

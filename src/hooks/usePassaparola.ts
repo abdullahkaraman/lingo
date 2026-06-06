@@ -378,7 +378,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
 
     setTimeout(() => {
       const { guesses: g } = get()
-      const confirmed = getConfirmedLetters(g)
+      const confirmed = getConfirmedLetters(g, targetWord[0])
 
       // Open the next row empty; animate confirmed letters in after the flip.
       const nextGuesses = g.map((row, i) =>
@@ -387,7 +387,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       set({
         guesses: nextGuesses,
         currentGuessIndex: nextIdx,
-        currentInput: Array(wordLength).fill(''),
+        currentInput: buildInputArray(wordLength, confirmed),
       })
 
       const entries = Object.entries(confirmed)

@@ -255,7 +255,7 @@ export const useGame = create<GameStore>((set, get) => ({
 
     setTimeout(() => {
       const { guesses: g } = get()
-      const confirmed = getConfirmedLetters(g)
+      const confirmed = getConfirmedLetters(g, targetWord[0])
 
       // Open the next row with no pre-fills; animate them in after the flip.
       const nextGuesses = g.map((row, i) =>
@@ -264,7 +264,7 @@ export const useGame = create<GameStore>((set, get) => ({
       set({
         guesses: nextGuesses,
         currentGuessIndex: nextIdx,
-        currentInput: buildInputArray(wordLength, {}),
+        currentInput: buildInputArray(wordLength, confirmed),
         timeLeft: get().timerMax,
       })
 
@@ -312,12 +312,13 @@ export const useGame = create<GameStore>((set, get) => ({
   },
 
   setVoiceInput: (word: string) => {
-    const { phase, wordLength, currentGuessIndex, guesses, isValidating } = get()
+    const { phase, wordLength, currentGuessIndex, guesses, isValidating, targetWord } = get()
     if (phase !== 'playing' || isValidating) return
     const normalized = normalize(word)
     if ([...normalized].length !== wordLength) return
 
-    const firstLetter = getConfirmedLetters(guesses)[0] ?? ''
+    const confirmed = getConfirmedLetters(guesses, targetWord[0])
+    const firstLetter = confirmed[0] ?? ''
     const newInput: string[] = Array.from({ length: wordLength }, (_, i) =>
       i === 0 ? firstLetter : (normalized[i] ?? ''),
     )
