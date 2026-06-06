@@ -4,10 +4,11 @@ import { Keyboard } from '../Keyboard'
 import type { PublicState } from '../../game-engine/types'
 import type { MultiplayerClient } from '../../multiplayer/client'
 import type { GameError } from '../../hooks/useMultiplayerGame'
-import { VALID_LETTERS } from '../../game/constants'
+
 import { getConfirmedLetters, buildInputArray, withLocalInput } from '../../game/board'
 import { computeLetterStatuses } from '../../game/keyboard'
 import { getRevealDuration } from '../../game/revealAnimation'
+import { useTurkishKeyboardInput } from '../../hooks/useTurkishKeyboardInput'
 
 
 interface Props {
@@ -31,7 +32,6 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   const [displayError, setDisplayError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(timerSeconds)
   const [passVisible, setPassVisible] = useState(false)
-  const hiddenInputRef = useRef<HTMLInputElement>(null)
   const revealTimers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   function cancelReveal() {
@@ -128,28 +128,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [error?.key])
 
-  // Auto-focus hidden input when it's our turn.
-  useEffect(() => {
-    if (canGuess) setTimeout(() => hiddenInputRef.current?.focus(), 80)
-    else hiddenInputRef.current?.blur()
-  }, [canGuess])
 
-  // Physical keyboard.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.target === hiddenInputRef.current) return
-      if (!canGuess) return
-      if (e.ctrlKey || e.altKey || e.metaKey) return
-      if (e.key === 'Enter') { handleSubmit(); return }
-      if (e.key === 'Backspace' || e.key === 'Delete') { handleDelete(); return }
-      if (e.key.length === 1) {
-        const upper = e.key.toLocaleUpperCase('tr-TR')
-        if (VALID_LETTERS.has(upper)) handleTypeChar(upper)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  })
 
   const handleTypeChar = useCallback((char: string) => {
     if (!canGuess) return
@@ -181,17 +160,18 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     client.send({ type: 'guess', word: input.join('') })
   }, [canGuess, input, client])
 
-  function handleNativeInput(e: React.FormEvent<HTMLInputElement>) {
-    if (!canGuess) return
-    const ne = e.nativeEvent as InputEvent
-    if (ne.inputType === 'deleteContentBackward') handleDelete()
-    else if (ne.inputType === 'insertLineBreak') handleSubmit()
-    else if (ne.data) {
-      const char = ne.data.toLocaleUpperCase('tr-TR')
-      if (VALID_LETTERS.has(char)) handleTypeChar(char)
-    }
-    ;(e.target as HTMLInputElement).value = ' '
-  }
+  const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({
+    onChar: handleTypeChar,
+    onDelete: handleDelete,
+    onEnter: handleSubmit,
+    onInvalidKey: () => {
+      setShaking(true)
+      setTimeout(() => setShaking(false), 600)
+    },
+    isActive: canGuess,
+  })
+
+
 
   const displayRows = withLocalInput(myBoard.rows, myBoard.currentRowIndex, input)
   const letterStatuses = computeLetterStatuses(myBoard.rows)

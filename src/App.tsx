@@ -11,6 +11,7 @@ import { WordLengthSetup } from './components/WordLengthSetup'
 import { MobileActionBar } from './components/MobileActionBar'
 import { VALID_LETTERS, MAX_ATTEMPTS } from './game/constants'
 import { useGame } from './hooks/useGame'
+import { useTurkishKeyboardInput } from './hooks/useTurkishKeyboardInput'
 import type { WordLength } from './game/types'
 
 export default function App() {
@@ -38,7 +39,6 @@ export default function App() {
   const [editingName, setEditingName] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hiddenInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
 
@@ -72,6 +72,19 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, phase, currentGuessIndex])
 
+  // ── Input Handling ────────────────────────────────────────────────────────
+  const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({
+    onChar: typeChar,
+    onDelete: deleteLast,
+    onEnter: () => { void submitGuess() },
+    onInvalidKey: () => {
+      setShaking(true)
+      setTimeout(() => setShaking(false), 500)
+    },
+    isActive: view === 'game' && phase === 'playing',
+    disabled: isValidating,
+  })
+
   // ── Shake on error ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!errorMessage) return
@@ -83,18 +96,6 @@ export default function App() {
     }, 600)
   }, [errorMessage, clearError])
 
-  // ── Auto-focus hidden input on mobile when gameplay starts/resumes ────────
-  useEffect(() => {
-    if (view === 'game' && phase === 'playing') {
-      const t = setTimeout(() => hiddenInputRef.current?.focus(), 80)
-      return () => clearTimeout(t)
-    }
-    // Dismiss the native keyboard when the round ends
-    if (phase === 'round_success' || phase === 'round_failed') {
-      hiddenInputRef.current?.blur()
-    }
-  }, [view, phase])
-
   // ── Scroll active row into view after each guess ─────────────────────────
   useEffect(() => {
     if (view !== 'game' || phase !== 'playing') return
@@ -105,42 +106,6 @@ export default function App() {
     }, 350)
     return () => clearTimeout(t)
   }, [currentGuessIndex, view, phase])
-
-  // ── Physical keyboard (desktop) ───────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // When the hidden input is focused it handles its own events via onInput
-      if (e.target === hiddenInputRef.current) return
-      if (view !== 'game' || phase !== 'playing' || isValidating) return
-      if (e.ctrlKey || e.altKey || e.metaKey) return
-      if (e.key === 'Enter') { void submitGuess(); return }
-      if (e.key === 'Backspace' || e.key === 'Delete') { deleteLast(); return }
-      if (e.key.length === 1) {
-        const upper = e.key.toLocaleUpperCase('tr-TR')
-        if (VALID_LETTERS.has(upper)) typeChar(upper)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [view, phase, isValidating, typeChar, deleteLast, submitGuess])
-
-  // ── Native keyboard input handler (mobile) ────────────────────────────────
-  function handleNativeInput(e: React.FormEvent<HTMLInputElement>) {
-    if (phase !== 'playing' || isValidating) return
-    const ne = e.nativeEvent as InputEvent
-    if (ne.inputType === 'deleteContentBackward') {
-      deleteLast()
-    } else if (ne.inputType === 'insertLineBreak') {
-      // Android virtual keyboards fire this instead of a form submit event
-      void submitGuess()
-    } else if (ne.data) {
-      const char = ne.data.toLocaleUpperCase('tr-TR')
-      if (VALID_LETTERS.has(char)) typeChar(char)
-    }
-    // Keep a sentinel space so the next backspace press always has content to
-    // delete and fires the input event (empty inputs swallow backspace silently).
-    ;(e.target as HTMLInputElement).value = ' '
-  }
 
   function handleNativeSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

@@ -4,8 +4,9 @@ import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
 import { AlphabetStrip } from './AlphabetStrip'
 import { usePassaparola, PASSAPAROLA_ALPHABET } from '../../hooks/usePassaparola'
+import { useTurkishKeyboardInput } from '../../hooks/useTurkishKeyboardInput'
 
-import { VALID_LETTERS } from '../../game/constants'
+
 
 export function PassaparolaApp() {
   const {
@@ -17,7 +18,6 @@ export function PassaparolaApp() {
   } = usePassaparola()
 
   const [shaking, setShaking] = useState(false)
-  const hiddenInputRef = useRef<HTMLInputElement>(null)
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentLetter = queue[0] ?? ''
@@ -27,16 +27,17 @@ export function PassaparolaApp() {
     if (phase === 'idle') startGame()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-focus hidden input when playing ────────────────────────────────────
-  useEffect(() => {
-    if (phase === 'playing') {
-      const t = setTimeout(() => hiddenInputRef.current?.focus(), 80)
-      return () => clearTimeout(t)
-    }
-    if (phase === 'round_won' || phase === 'round_skipped') {
-      hiddenInputRef.current?.blur()
-    }
-  }, [phase, currentLetter])
+  const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({
+    onChar: typeChar,
+    onDelete: deleteLast,
+    onEnter: () => { void submitGuess() },
+    onTab: passLetter,
+    onInvalidKey: () => {
+      setShaking(true)
+      setTimeout(() => setShaking(false), 500)
+    },
+    isActive: phase === 'playing',
+  })
 
   // ── Shake on error ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -48,39 +49,6 @@ export function PassaparolaApp() {
       clearError()
     }, 600)
   }, [errorMessage, clearError])
-
-  // ── Physical keyboard ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (phase !== 'playing') return
-      if (e.ctrlKey || e.metaKey) return
-      if (e.key === 'Tab') { e.preventDefault(); passLetter(); return }
-      if (e.target === hiddenInputRef.current) return
-      if (e.key === 'Enter') { void submitGuess(); return }
-      if (e.key === 'Backspace' || e.key === 'Delete') { deleteLast(); return }
-      if (e.key.length === 1) {
-        const upper = e.key.toLocaleUpperCase('tr-TR')
-        if (VALID_LETTERS.has(upper)) typeChar(upper)
-      }
-    }
-    window.addEventListener('keydown', handler, { capture: true })
-    return () => window.removeEventListener('keydown', handler, { capture: true })
-  }, [phase, typeChar, deleteLast, submitGuess, passLetter])
-
-  // ── Mobile keyboard ──────────────────────────────────────────────────────────
-  function handleNativeInput(e: React.FormEvent<HTMLInputElement>) {
-    if (phase !== 'playing') return
-    const ne = e.nativeEvent as InputEvent
-    if (ne.inputType === 'deleteContentBackward') {
-      deleteLast()
-    } else if (ne.inputType === 'insertLineBreak') {
-      void submitGuess()
-    } else if (ne.data) {
-      const char = ne.data.toLocaleUpperCase('tr-TR')
-      if (VALID_LETTERS.has(char)) typeChar(char)
-    }
-    ;(e.target as HTMLInputElement).value = ' '
-  }
 
   // ── Letter status map for keyboard colours ───────────────────────────────────
   const letterStatuses = useCallback((): Record<string, string> => {
@@ -183,6 +151,7 @@ export function PassaparolaApp() {
         onClick={() => { if (phase === 'playing') hiddenInputRef.current?.focus() }}
       >
         <GameHeader onRestart={() => { window.location.href = '/' }} />
+        {/* Hidden input moved to bottom, but we still need currentLetter here */}
 
         {/* Alphabet strip */}
         <AlphabetStrip outcomes={outcomes} />
@@ -328,7 +297,7 @@ export function PassaparolaApp() {
         </div>
       </div>
 
-      {/* Hidden native keyboard input */}
+      {/* Hidden native keyboard input handled by hook */}
       <form onSubmit={(e) => { e.preventDefault(); void submitGuess() }}>
         <input
           ref={hiddenInputRef}
