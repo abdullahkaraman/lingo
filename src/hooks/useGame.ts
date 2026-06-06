@@ -78,7 +78,7 @@ interface GameStore extends GameState {
   deleteLast: () => void
   clearInput: () => void
   setVoiceInput: (word: string) => void
-  submitGuess: () => Promise<void>
+  submitGuess: () => void
   clearError: () => void
   tickTimer: () => void
   resetGame: () => void
@@ -177,7 +177,7 @@ export const useGame = create<GameStore>((set, get) => ({
     set({ currentInput: newInput, guesses: updated })
   },
 
-  submitGuess: async () => {
+  submitGuess: () => {
     const {
       phase, currentInput, wordLength, targetWord,
       guesses, currentGuessIndex, score, wordsGuessed, isValidating,

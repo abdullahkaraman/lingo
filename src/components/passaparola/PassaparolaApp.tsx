@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GameHeader } from '../GameHeader'
 import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
 import { AlphabetStrip } from './AlphabetStrip'
 import { usePassaparola, PASSAPAROLA_ALPHABET } from '../../hooks/usePassaparola'
 import { useTurkishKeyboardInput } from '../../hooks/useTurkishKeyboardInput'
+import { computeLetterStatuses } from '../../game/keyboard'
 
 
 
@@ -30,7 +31,7 @@ export function PassaparolaApp() {
   const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({
     onChar: typeChar,
     onDelete: deleteLast,
-    onEnter: () => { void submitGuess() },
+    onEnter: () => { submitGuess() },
     onTab: passLetter,
     onInvalidKey: () => {
       setShaking(true)
@@ -50,21 +51,6 @@ export function PassaparolaApp() {
     }, 600)
   }, [errorMessage, clearError])
 
-  // ── Letter status map for keyboard colours ───────────────────────────────────
-  const letterStatuses = useCallback((): Record<string, string> => {
-    const map: Record<string, string> = {}
-    for (const row of guesses) {
-      if (!row.submitted) continue
-      for (const l of row.letters) {
-        if (!l.char) continue
-        const cur = map[l.char]
-        if (cur === 'correct') continue
-        if (l.status === 'correct' || !cur) { map[l.char] = l.status; continue }
-        if (l.status === 'present' && cur !== 'correct') map[l.char] = 'present'
-      }
-    }
-    return map
-  }, [guesses])
 
   // ── Game over screen ─────────────────────────────────────────────────────────
   if (phase === 'game_over') {
@@ -266,7 +252,7 @@ export function PassaparolaApp() {
             ⌫
           </button>
           <button
-            onPointerDown={(e) => { e.preventDefault(); void submitGuess() }}
+            onPointerDown={(e) => { e.preventDefault(); submitGuess() }}
             disabled={phase !== 'playing'}
             className="flex-1 py-4 rounded-2xl bg-yellow-500 border border-yellow-400
               text-zinc-900 text-2xl font-black active:scale-95 transition-all select-none
@@ -290,15 +276,15 @@ export function PassaparolaApp() {
           <Keyboard
             onKey={typeChar}
             onDelete={clearInput}
-            onEnter={() => void submitGuess()}
-            letterStatuses={letterStatuses()}
+            onEnter={() => submitGuess()}
+            letterStatuses={computeLetterStatuses(guesses)}
             isValidating={false}
           />
         </div>
       </div>
 
       {/* Hidden native keyboard input handled by hook */}
-      <form onSubmit={(e) => { e.preventDefault(); void submitGuess() }}>
+      <form onSubmit={(e) => { e.preventDefault(); submitGuess() }}>
         <input
           ref={hiddenInputRef}
           onInput={handleNativeInput}
