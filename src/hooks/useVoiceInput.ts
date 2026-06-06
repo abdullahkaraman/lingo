@@ -1,8 +1,16 @@
 import { useRef, useState } from 'react'
 import { VALID_LETTERS } from '../game/constants'
-import { useGame } from './useGame'
 
-export function useVoiceInput() {
+interface UseVoiceInputOptions {
+  /** Expected word length — used to filter speech alternatives. */
+  wordLength: number
+  /** Called when a valid word matching the expected length is recognized. */
+  onWord: (word: string) => void
+  /** Called when no valid alternative is found. */
+  onError?: (message: string) => void
+}
+
+export function useVoiceInput({ wordLength, onWord, onError }: UseVoiceInputOptions) {
   const [isListening, setIsListening] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
@@ -74,9 +82,6 @@ export function useVoiceInput() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
-      const store = useGame.getState()
-      const { wordLength } = store
-
       console.group('[Voice Input] Result received')
       console.log('wordLength expected:', wordLength)
       console.log('raw event.results:', event.results)
@@ -128,17 +133,13 @@ export function useVoiceInput() {
       if (!matched) {
         console.warn('[Voice Input] No valid match found across all alternatives — showing error')
         console.groupEnd()
-        useGame.setState({ errorMessage: 'Kelime anlaşılamadı, tekrar dene!' })
+        onError?.('Kelime anlaşılamadı, tekrar dene!')
         return
       }
 
       console.log('[Voice Input] Final accepted word:', matched)
-
-      // Fill all positions at once, respecting already-confirmed letters
-      console.log('[Voice Input] Setting voice input word:', matched)
-      useGame.getState().setVoiceInput(matched)
-
-      console.log('[Voice Input] Word written into row:', useGame.getState().currentInput.join(''))
+      console.log('[Voice Input] Calling onWord callback:', matched)
+      onWord(matched)
       console.groupEnd()
     }
 

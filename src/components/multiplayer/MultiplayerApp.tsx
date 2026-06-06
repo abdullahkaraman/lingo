@@ -24,7 +24,7 @@ interface Props {
 
 export function MultiplayerApp({ roomId }: Props) {
   const navigate = useNavigate()
-  const playerId = useRef(loadOrCreatePlayerId()).current
+  const [playerId] = useState(() => loadOrCreatePlayerId())
   const clientRef = useRef(new PartyKitClient())
   const client = clientRef.current
 

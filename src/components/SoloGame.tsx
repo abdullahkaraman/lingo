@@ -37,7 +37,11 @@ export function SoloGame() {
   const nameInputRef = useRef<HTMLInputElement>(null)
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { isListening, speechSupported, startVoiceInput } = useVoiceInput()
+  const { isListening, speechSupported, startVoiceInput } = useVoiceInput({
+    wordLength,
+    onWord: (word) => useGame.getState().setVoiceInput(word),
+    onError: (msg) => useGame.setState({ errorMessage: msg }),
+  })
 
   // ── Word length selection ─────────────────────────────────────────────────
   function handleSelectLength(len: WordLength, timerSeconds: number) {

@@ -1,7 +1,7 @@
-import tdkData from '../data/tdk-valid.json'
+import { VALID_WORDS } from '../data'
 
 const validWordSet = new Set(
-  (Object.values((tdkData as unknown as { valid: Record<number, string[]> }).valid) as string[][])
+  (Object.values(VALID_WORDS) as string[][])
     .flat()
     .map((w) => w.toLocaleUpperCase('tr-TR'))
 )

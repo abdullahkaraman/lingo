@@ -3,7 +3,7 @@ import type { GuessRow, Letter, WordLength } from '../game/types'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
-import tdkData from '../data/tdk-valid.json'
+import { GAME_WORDS } from '../data'
 import { createInputActions, animateConfirmedLetters } from './sharedStoreActions'
 
 // ── Alphabet ─────────────────────────────────────────────────────────────────
@@ -21,8 +21,6 @@ import { getConfirmedLetters, buildInputArray, buildInitialBoard, buildBlankRow 
 import { getRevealDuration } from '../game/revealAnimation'
 const MAX_INVALID_PER_LETTER = 4
 const DEFAULT_WORD_LENGTH: WordLength = 5
-
-const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
 // ── Used-word tracking (separate key from regular game) ───────────────────────
 
@@ -47,7 +45,7 @@ function markUsed(len: WordLength, word: string): void {
 
 function pickWordByLetter(letter: string, wordLength: WordLength): string {
   const used = loadUsed(wordLength)
-  const all = (WORD_LISTS[wordLength] ?? []).map((w) => w.toLocaleUpperCase('tr-TR'))
+  const all = (GAME_WORDS[wordLength] ?? []).map((w) => w.toLocaleUpperCase('tr-TR'))
 
   let candidates = all.filter((w) => w[0] === letter && !used.has(w))
 

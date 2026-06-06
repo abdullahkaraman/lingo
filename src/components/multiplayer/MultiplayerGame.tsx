@@ -141,7 +141,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
       next[nextPos] = char
       return next
     })
-  }, [canGuess, myBoard.rows])
+  }, [canGuess])
 
   const handleDelete = useCallback(() => {
     if (!canGuess) return
@@ -155,7 +155,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
       }
       return prev
     })
-  }, [canGuess, myBoard.rows])
+  }, [canGuess])
 
   const handleSubmit = useCallback(() => {
     if (!canGuess || input.includes('')) return

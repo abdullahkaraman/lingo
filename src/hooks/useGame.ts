@@ -3,10 +3,8 @@ import type { GameState, Letter, WordLength } from '../game/types'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
-import tdkData from '../data/tdk-valid.json'
+import { GAME_WORDS } from '../data'
 import { createInputActions, animateConfirmedLetters } from './sharedStoreActions'
-
-const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
 import { MAX_ATTEMPTS, ATTEMPT_SCORES } from '../game/constants'
 import { getConfirmedLetters, buildInputArray, buildActiveRow, buildInitialBoard } from '../game/board'
@@ -33,13 +31,13 @@ function markUsed(len: WordLength, word: string): void {
 
 function pickLocalWord(wordLength: WordLength, wordsPlayed: number): string {
   const used = loadUsed(wordLength)
-  let candidates = (WORD_LISTS[wordLength] ?? []).filter(
+  let candidates = (GAME_WORDS[wordLength] ?? []).filter(
     (w) => !used.has(w.toLocaleUpperCase('tr-TR')),
   )
 
   if (candidates.length === 0) {
     localStorage.removeItem(usedKey(wordLength))
-    candidates = WORD_LISTS[wordLength] ?? []
+    candidates = GAME_WORDS[wordLength] ?? []
   }
 
   if (candidates.length === 1) return candidates[0].toLocaleUpperCase('tr-TR')

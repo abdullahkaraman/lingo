@@ -1,7 +1,5 @@
-import tdkData from '../data/tdk-valid.json'
+import { GAME_WORDS } from '../data'
 import type { WordLength } from './types'
-
-const GAME_WORDS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
 // FNV-1a 32-bit hash — fast, dependency-free, uniform distribution.
 function fnv1a(str: string): number {
