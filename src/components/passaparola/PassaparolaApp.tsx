@@ -5,7 +5,7 @@ import { Keyboard } from '../Keyboard'
 import { AlphabetStrip } from './AlphabetStrip'
 import { usePassaparola, PASSAPAROLA_ALPHABET } from '../../hooks/usePassaparola'
 
-const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
+import { VALID_LETTERS } from '../../game/constants'
 
 export function PassaparolaApp() {
   const {

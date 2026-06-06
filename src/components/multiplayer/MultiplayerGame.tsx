@@ -4,8 +4,8 @@ import { Keyboard } from '../Keyboard'
 import type { PublicState, GuessRow, LetterStatus } from '../../game-engine/types'
 import type { MultiplayerClient } from '../../multiplayer/client'
 import type { GameError } from '../../hooks/useMultiplayerGame'
+import { VALID_LETTERS, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../../game/constants'
 
-const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
 
 interface Props {
   state: PublicState
@@ -111,7 +111,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
       .map(([k, v]) => [Number(k), v] as [number, string])
       .sort((a, b) => a[0] - b[0])
 
-    const flipDone = (wordLength - 1) * 120 + 500
+    const flipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
     const stagger = 200
 
     entries.forEach(([pos, char], idx) => {

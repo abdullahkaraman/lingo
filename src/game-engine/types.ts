@@ -1,19 +1,8 @@
-// ── Primitives shared with the existing single-player code ───────────────────
+import { MAX_ATTEMPTS } from '../game/constants'
+import { LetterStatus, Letter, GuessRow, WordLength } from '../game/types'
 
-export const MAX_ATTEMPTS = 5
-
-export type WordLength = 4 | 5 | 6 | 7
-export type LetterStatus = 'correct' | 'present' | 'absent' | 'empty' | 'filled'
-
-export interface Letter {
-  char: string
-  status: LetterStatus
-}
-
-export interface GuessRow {
-  letters: Letter[]
-  submitted: boolean
-}
+export { MAX_ATTEMPTS }
+export type { LetterStatus, Letter, GuessRow, WordLength }
 
 // ── Room-level types ──────────────────────────────────────────────────────────
 

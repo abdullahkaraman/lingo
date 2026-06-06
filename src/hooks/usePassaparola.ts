@@ -15,9 +15,8 @@ export const PASSAPAROLA_ALPHABET = [
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MAX_ATTEMPTS = 5
+import { MAX_ATTEMPTS, ATTEMPT_SCORES, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../game/constants'
 const MAX_INVALID_PER_LETTER = 4
-const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 const DEFAULT_WORD_LENGTH: WordLength = 5
 
 const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
@@ -409,7 +408,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     // Wrong guess but more attempts remain — advance row
     set({ guesses: updatedGuesses, invalidCount: 0 })
     const nextIdx = currentGuessIndex + 1
-    const flipDone = (wordLength - 1) * 120 + 500
+    const flipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
 
     setTimeout(() => {
       const { guesses: g } = get()

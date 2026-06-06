@@ -9,10 +9,9 @@ import { ScoreBoard } from './components/ScoreBoard'
 import { RoundResultModal } from './components/RoundResultModal'
 import { WordLengthSetup } from './components/WordLengthSetup'
 import { MobileActionBar } from './components/MobileActionBar'
-import { useGame, MAX_ATTEMPTS } from './hooks/useGame'
-import type { WordLength } from './types/game'
-
-const VALID_LETTERS = new Set('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split(''))
+import { VALID_LETTERS, MAX_ATTEMPTS } from './game/constants'
+import { useGame } from './hooks/useGame'
+import type { WordLength } from './game/types'
 
 export default function App() {
   const params = new URLSearchParams(window.location.search)

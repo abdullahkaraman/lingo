@@ -1,4 +1,4 @@
-import type { LetterStatus } from '../types/game'
+import type { LetterStatus } from '../game/types'
 
 /**
  * Evaluates a guess against a target word.

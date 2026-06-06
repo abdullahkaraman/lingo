@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { LetterCell } from './LetterCell'
-import type { GuessRow } from '../types/game'
+import type { GuessRow } from '../game/types'
 
 interface GameBoardProps {
   guesses: GuessRow[]

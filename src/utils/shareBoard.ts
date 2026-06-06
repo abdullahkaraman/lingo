@@ -1,4 +1,4 @@
-import type { GuessRow } from '../types/game'
+import type { GuessRow } from '../game/types'
 
 const TILE_SIZE = 56
 const GAP = 6

@@ -7,7 +7,7 @@ import type {
   RoomState,
   WordLength,
 } from './types'
-import { MAX_ATTEMPTS } from './types'
+import { MAX_ATTEMPTS } from '../game/constants'
 import { pickWord } from './word'
 
 const MAX_PLAYERS = 2

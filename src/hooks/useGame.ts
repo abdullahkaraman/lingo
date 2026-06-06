@@ -7,9 +7,7 @@ import tdkData from '../data/tdk-valid.json'
 
 const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
-const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
-
-export const MAX_ATTEMPTS = 5
+import { MAX_ATTEMPTS, ATTEMPT_SCORES, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../game/constants'
 
 const TIMER_DEFAULT = 12
 
@@ -292,8 +290,8 @@ export const useGame = create<GameStore>((set, get) => ({
     set({ guesses: updatedGuesses })
     const nextIdx = currentGuessIndex + 1
 
-    // Actual flip completes when the last tile finishes: (wordLength-1)*120 + 500 ms.
-    const actualFlipDone = (wordLength - 1) * 120 + 500
+    // Actual flip completes when the last tile finishes: (wordLength-1)*REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS ms.
+    const actualFlipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
 
     setTimeout(() => {
       const { guesses: g } = get()

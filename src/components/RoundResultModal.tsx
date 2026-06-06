@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { FailReason, GamePhase, GuessRow } from '../types/game'
+import { REVEAL_STAGGER_MS } from '../game/constants'
+import type { FailReason, GamePhase, GuessRow } from '../game/types'
 import { shareBoard } from '../utils/shareBoard'
 
 interface RoundResultModalProps {
@@ -32,7 +33,7 @@ export function RoundResultModal({
     if (phase === 'round_success' || phase === 'round_failed') {
       const delay =
         phase === 'round_success' || failReason === 'exhausted'
-          ? wordLength * 120 + 450
+          ? wordLength * REVEAL_STAGGER_MS + 450
           : 250
       const t = setTimeout(() => setVisible(true), delay)
       return () => clearTimeout(t)

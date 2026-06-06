@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { LetterStatus } from '../types/game'
+import { REVEAL_STAGGER_MS } from '../game/constants'
+import type { LetterStatus } from '../game/types'
 
 interface LetterCellProps {
   char: string
@@ -24,7 +25,7 @@ export function LetterCell({ char, status, submitted, index, isCurrentRow, isFla
 
   useEffect(() => {
     if (submitted && !revealed) {
-      const delay = index * 120
+      const delay = index * REVEAL_STAGGER_MS
       // Phase 1: rotate to 90deg (hide current face)
       const t1 = setTimeout(() => setMid(true), delay)
       // Phase 2: swap color, rotate back to 0deg (show result)

@@ -1,5 +1,5 @@
 import type { GuessRow, LetterStatus, PlayerBoard, RoomState } from './types'
-import { MAX_ATTEMPTS } from './types'
+import { MAX_ATTEMPTS, ATTEMPT_SCORES } from '../game/constants'
 import { evaluateGuess as evaluate } from '../utils/evaluateGuess'
 import { isValidWord } from '../utils/dictionary'
 import { normalize } from '../utils/normalizeTurkish'
@@ -8,7 +8,6 @@ import { advanceTurn } from './room'
 export { evaluate as evaluateGuess }
 export { MAX_ATTEMPTS }
 
-const ATTEMPT_SCORES = [2000, 1600, 1200, 800, 400]
 
 function buildRow(guess: string, statuses: LetterStatus[]): GuessRow {
   return {
