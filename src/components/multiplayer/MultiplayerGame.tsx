@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
-import type { PublicState, GuessRow, LetterStatus } from '../../game-engine/types'
+import type { PublicState } from '../../game-engine/types'
 import type { MultiplayerClient } from '../../multiplayer/client'
 import type { GameError } from '../../hooks/useMultiplayerGame'
-import { VALID_LETTERS, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../../game/constants'
+import { VALID_LETTERS } from '../../game/constants'
+import { getConfirmedLetters, buildInputArray, withLocalInput } from '../../game/board'
+import { computeLetterStatuses } from '../../game/keyboard'
+import { getRevealDuration } from '../../game/revealAnimation'
 
 
 interface Props {
@@ -14,53 +17,7 @@ interface Props {
   client: MultiplayerClient
 }
 
-function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
-  const confirmed: Record<number, string> = {}
-  for (const row of rows) {
-    row.letters.forEach((l, i) => {
-      if (l.status === 'correct' && l.char) confirmed[i] = l.char
-    })
-  }
-  return confirmed
-}
 
-function buildInputArray(wordLength: number, confirmed: Record<number, string>): string[] {
-  return Array.from({ length: wordLength }, (_, i) => confirmed[i] ?? '')
-}
-
-// Merge the locally-typed positional input into the server's board rows for display.
-// Active-row tiles are always 'filled' (no green) — submitted rows handle their own colours.
-function withLocalInput(
-  rows: GuessRow[],
-  rowIndex: number,
-  input: string[],
-): GuessRow[] {
-  return rows.map((row, i) => {
-    if (i !== rowIndex || row.submitted) return row
-    return {
-      ...row,
-      letters: input.map((char) => ({
-        char,
-        status: (char ? 'filled' : 'empty') as LetterStatus,
-      })),
-    }
-  })
-}
-
-function computeLetterStatuses(rows: GuessRow[]): Record<string, string> {
-  const map: Record<string, string> = {}
-  for (const row of rows) {
-    if (!row.submitted) continue
-    for (const l of row.letters) {
-      if (!l.char) continue
-      const cur = map[l.char]
-      if (cur === 'correct') continue
-      if (l.status === 'correct' || !cur) { map[l.char] = l.status; continue }
-      if (l.status === 'present' && cur !== 'correct') map[l.char] = 'present'
-    }
-  }
-  return map
-}
 
 export function MultiplayerGame({ state, myId, error, client }: Props) {
   const { isMyTurn, myBoard, wordLength, players, timerSeconds } = state
@@ -111,7 +68,7 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
       .map(([k, v]) => [Number(k), v] as [number, string])
       .sort((a, b) => a[0] - b[0])
 
-    const flipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
+    const flipDone = getRevealDuration(wordLength)
     const stagger = 200
 
     entries.forEach(([pos, char], idx) => {

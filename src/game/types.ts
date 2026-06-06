@@ -16,3 +16,10 @@ export type GamePhase = 'playing' | 'round_success' | 'round_failed'
 
 // Why the round failed — drives modal copy and modal delay timing
 export type FailReason = 'exhausted' | 'timeout' | 'invalid_word' | null
+
+export interface PlayerBoard {
+  rows: GuessRow[]
+  currentRowIndex: number
+  status: 'guessing' | 'won' | 'lost'
+  invalidCount: number // invalid-word submissions since last valid guess; resets on each valid guess
+}

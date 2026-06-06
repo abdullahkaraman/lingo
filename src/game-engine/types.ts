@@ -1,8 +1,8 @@
 import { MAX_ATTEMPTS } from '../game/constants'
-import { LetterStatus, Letter, GuessRow, WordLength } from '../game/types'
+import { LetterStatus, Letter, GuessRow, WordLength, PlayerBoard } from '../game/types'
 
 export { MAX_ATTEMPTS }
-export type { LetterStatus, Letter, GuessRow, WordLength }
+export type { LetterStatus, Letter, GuessRow, WordLength, PlayerBoard }
 
 // ── Room-level types ──────────────────────────────────────────────────────────
 
@@ -13,13 +13,6 @@ export interface Player {
   name: string
   score: number
   connected: boolean
-}
-
-export interface PlayerBoard {
-  rows: GuessRow[]
-  currentRowIndex: number
-  status: 'guessing' | 'won' | 'lost'
-  invalidCount: number  // invalid-word submissions since last valid guess; resets on each valid guess
 }
 
 // Full server-side state — targetWord is never sent to clients during play.

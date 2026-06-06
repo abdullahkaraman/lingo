@@ -8,28 +8,14 @@ import type {
   WordLength,
 } from './types'
 import { MAX_ATTEMPTS } from '../game/constants'
+import { emptyBoard } from '../game/board'
 import { pickWord } from './word'
 
 const MAX_PLAYERS = 2
 const DEFAULT_MAX_ROUNDS = 5
 const DEFAULT_WORD_LENGTH: WordLength = 5
 
-function emptyBoard(wordLength: WordLength, targetWord: string): PlayerBoard {
-  const firstLetter = targetWord[0]
-  return {
-    rows: Array.from({ length: MAX_ATTEMPTS }, (_, rowIdx) => ({
-      letters: Array.from({ length: wordLength }, (_, colIdx) =>
-        rowIdx === 0 && colIdx === 0
-          ? { char: firstLetter, status: 'correct' as const }
-          : { char: '', status: 'empty' as const },
-      ),
-      submitted: false,
-    })),
-    currentRowIndex: 0,
-    status: 'guessing',
-    invalidCount: 0,
-  }
-}
+
 
 export function createRoomState(
   roomId: string,

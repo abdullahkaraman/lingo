@@ -15,7 +15,9 @@ export const PASSAPAROLA_ALPHABET = [
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-import { MAX_ATTEMPTS, ATTEMPT_SCORES, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../game/constants'
+import { MAX_ATTEMPTS, ATTEMPT_SCORES } from '../game/constants'
+import { getConfirmedLetters, buildInputArray, buildInitialBoard, buildBlankRow } from '../game/board'
+import { getRevealDuration } from '../game/revealAnimation'
 const MAX_INVALID_PER_LETTER = 4
 const DEFAULT_WORD_LENGTH: WordLength = 5
 
@@ -59,45 +61,9 @@ function pickWordByLetter(letter: string, wordLength: WordLength): string {
   return candidates[Math.floor(Math.random() * candidates.length)]
 }
 
-// ── Confirmed-letter helpers ──────────────────────────────────────────────────
-
-function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
-  const confirmed: Record<number, string> = {}
-  for (const row of rows) {
-    row.letters.forEach((l, i) => {
-      if (l.status === 'correct' && l.char) confirmed[i] = l.char
-    })
-  }
-  return confirmed
-}
-
-function buildInputArray(wordLength: WordLength, confirmed: Record<number, string>): string[] {
-  return Array.from({ length: wordLength }, (_, i) => confirmed[i] ?? '')
-}
-
-// ── Board builders ────────────────────────────────────────────────────────────
-
-function buildActiveRow(wordLength: WordLength, firstLetter: string): GuessRow {
-  return {
-    letters: Array.from({ length: wordLength }, (_, i) => ({
-      char: i === 0 ? firstLetter : '',
-      status: (i === 0 ? 'filled' : 'empty') as Letter['status'],
-    })),
-    submitted: false,
-  }
-}
-
-function buildBlankRow(wordLength: WordLength): GuessRow {
-  return {
-    letters: Array.from({ length: wordLength }, () => ({ char: '', status: 'empty' as const })),
-    submitted: false,
-  }
-}
-
+// Board builder for Passaparola (can use shared helpers)
 function buildBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
-  return Array.from({ length: MAX_ATTEMPTS }, (_, i) =>
-    i === 0 ? buildActiveRow(wordLength, firstLetter) : buildBlankRow(wordLength),
-  )
+  return buildInitialBoard(wordLength, firstLetter)
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -408,7 +374,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
     // Wrong guess but more attempts remain — advance row
     set({ guesses: updatedGuesses, invalidCount: 0 })
     const nextIdx = currentGuessIndex + 1
-    const flipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
+    const flipDone = getRevealDuration(wordLength)
 
     setTimeout(() => {
       const { guesses: g } = get()

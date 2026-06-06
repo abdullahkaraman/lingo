@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GameState, GuessRow, Letter, LetterStatus, WordLength } from '../types/game'
+import type { GameState, Letter, LetterStatus, WordLength } from '../types/game'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
@@ -7,44 +7,9 @@ import tdkData from '../data/tdk-valid.json'
 
 const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
-import { MAX_ATTEMPTS, ATTEMPT_SCORES, REVEAL_STAGGER_MS, REVEAL_END_DELAY_MS } from '../game/constants'
-
-const TIMER_DEFAULT = 12
-
-// ── Confirmed-letter helpers ─────────────────────────────────────────────────
-
-function getConfirmedLetters(rows: GuessRow[]): Record<number, string> {
-  const confirmed: Record<number, string> = {}
-  for (const row of rows) {
-    row.letters.forEach((l, i) => {
-      if (l.status === 'correct' && l.char) confirmed[i] = l.char
-    })
-  }
-  return confirmed
-}
-
-function buildInputArray(length: number, confirmed: Record<number, string>): string[] {
-  return Array.from({ length }, (_, i) => confirmed[i] ?? '')
-}
-
-// ── Row builders ────────────────────────────────────────────────────────────
-
-function buildActiveRow(length: number, confirmed: Record<number, string>): GuessRow {
-  return {
-    letters: Array.from({ length }, (_, i) => {
-      const char = confirmed[i] ?? ''
-      return { char, status: (char ? 'filled' : 'empty') as LetterStatus }
-    }),
-    submitted: false,
-  }
-}
-
-function buildBlankRow(length: number): GuessRow {
-  return {
-    letters: Array.from({ length }, () => ({ char: '', status: 'empty' as const })),
-    submitted: false,
-  }
-}
+import { MAX_ATTEMPTS, ATTEMPT_SCORES } from '../game/constants'
+import { getConfirmedLetters, buildInputArray, buildActiveRow, buildInitialBoard } from '../game/board'
+import { getRevealDuration } from '../game/revealAnimation'
 
 // ── Per-device word history ──────────────────────────────────────────────────
 
@@ -102,12 +67,7 @@ function pickLocalWord(wordLength: WordLength, wordsPlayed: number): string {
   return word.toLocaleUpperCase('tr-TR')
 }
 
-function buildInitialBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
-  const confirmed = { 0: firstLetter }
-  return Array.from({ length: MAX_ATTEMPTS }, (_, i) =>
-    i === 0 ? buildActiveRow(wordLength, confirmed) : buildBlankRow(wordLength),
-  )
-}
+const TIMER_DEFAULT = 12
 
 // ── Store interface ──────────────────────────────────────────────────────────
 
@@ -290,8 +250,8 @@ export const useGame = create<GameStore>((set, get) => ({
     set({ guesses: updatedGuesses })
     const nextIdx = currentGuessIndex + 1
 
-    // Actual flip completes when the last tile finishes: (wordLength-1)*REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS ms.
-    const actualFlipDone = (wordLength - 1) * REVEAL_STAGGER_MS + REVEAL_END_DELAY_MS
+    // Actual flip completes when the last tile finishes.
+    const actualFlipDone = getRevealDuration(wordLength)
 
     setTimeout(() => {
       const { guesses: g } = get()
