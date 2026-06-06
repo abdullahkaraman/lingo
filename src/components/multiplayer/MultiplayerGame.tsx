@@ -9,6 +9,7 @@ import { getConfirmedLetters, buildInputArray, withLocalInput } from '../../game
 import { computeLetterStatuses } from '../../game/keyboard'
 import { getRevealDuration } from '../../game/revealAnimation'
 import { useTurkishKeyboardInput } from '../../hooks/useTurkishKeyboardInput'
+import { useGameTimer } from '../../hooks/useGameTimer'
 
 
 interface Props {
@@ -85,22 +86,23 @@ export function MultiplayerGame({ state, myId, error, client }: Props) {
     return cancelReveal
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myBoard.currentRowIndex])
-
   // Reset and run countdown timer when it's our turn.
   useEffect(() => {
     if (!timerActive) return
     setTimeLeft(timerSeconds)
   }, [state.currentTurn, timerSeconds, timerActive])
 
-  useEffect(() => {
-    if (!timerActive || !canGuess) return
-    if (timeLeft <= 0) {
-      client.send({ type: 'skip_turn' })
-      return
-    }
-    const id = setTimeout(() => setTimeLeft((t) => t - 1), 1000)
-    return () => clearTimeout(id)
-  }, [timeLeft, timerActive, canGuess, client])
+  useGameTimer({
+    tick: () => {
+      if (timeLeft <= 1) {
+        client.send({ type: 'skip_turn' })
+        setTimeLeft(0)
+      } else {
+        setTimeLeft(t => t - 1)
+      }
+    },
+    isActive: timerActive && canGuess && timeLeft > 0,
+  })
 
   // When there's no timer: reveal the Pass button after 30 s on the player's turn.
   useEffect(() => {

@@ -11,6 +11,7 @@ import { MAX_ATTEMPTS } from '../game/constants'
 import { useGame } from '../hooks/useGame'
 import { useTurkishKeyboardInput } from '../hooks/useTurkishKeyboardInput'
 import { useVoiceInput } from '../hooks/useVoiceInput'
+import { useGameTimer } from '../hooks/useGameTimer'
 import { computeLetterStatuses } from '../game/keyboard'
 import type { WordLength } from '../game/types'
 
@@ -50,12 +51,11 @@ export function SoloGame() {
     setView('setup')
   }
 
-  // ── Timer tick ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (view !== 'game' || phase !== 'playing') return
-    const interval = setInterval(tickTimer, 1000)
-    return () => clearInterval(interval)
-  }, [view, phase, currentGuessIndex, tickTimer])
+  // ── Timer tick handled by hook ────────────────────────────────────────────
+  useGameTimer({
+    tick: tickTimer,
+    isActive: view === 'game' && phase === 'playing',
+  })
 
   // ── Input Handling ────────────────────────────────────────────────────────
   const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({

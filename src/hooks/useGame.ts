@@ -1,9 +1,10 @@
 import { create } from 'zustand'
-import type { GameState, Letter, LetterStatus, WordLength } from '../game/types'
+import type { GameState, Letter, WordLength } from '../game/types'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
 import tdkData from '../data/tdk-valid.json'
+import { createInputActions, animateConfirmedLetters } from './sharedStoreActions'
 
 const WORD_LISTS = (tdkData as unknown as { game: Record<number, string[]> }).game
 
@@ -102,6 +103,8 @@ export const useGame = create<GameStore>((set, get) => ({
   wordsGuessed: 0,
   isValidating: false,
 
+  ...createInputActions(set, get),
+
   startNewWord: () => {
     const { wordLength, wordsPlayed, timerMax } = get()
 
@@ -128,53 +131,6 @@ export const useGame = create<GameStore>((set, get) => ({
   setWordLength: (length: WordLength, timerMax = TIMER_DEFAULT) => {
     set({ wordLength: length, timerMax })
     get().startNewWord()
-  },
-
-  typeChar: (char: string) => {
-    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
-    if (phase !== 'playing' || isValidating) return
-
-    const nextPos = currentInput.findIndex((c, i) => c === '' && i !== 0)
-    if (nextPos === -1) return
-
-    const newInput = [...currentInput]
-    newInput[nextPos] = normalize(char)
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-
-    set({ currentInput: newInput, guesses: updated, errorMessage: null })
-  },
-
-  deleteLast: () => {
-    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
-    if (phase !== 'playing' || isValidating) return
-
-    let lastPos = -1
-    for (let i = currentInput.length - 1; i >= 0; i--) {
-      if (currentInput[i] !== '' && i !== 0) { lastPos = i; break }
-    }
-    if (lastPos === -1) return
-
-    const newInput = [...currentInput]
-    newInput[lastPos] = ''
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-
-    set({ currentInput: newInput, guesses: updated })
   },
 
   submitGuess: () => {
@@ -268,47 +224,8 @@ export const useGame = create<GameStore>((set, get) => ({
         timeLeft: get().timerMax,
       })
 
-      const entries = Object.entries(confirmed)
-        .map(([k, v]) => [Number(k), v] as [number, string])
-        .sort((a, b) => a[0] - b[0])
-
-      entries.forEach(([pos, char], idx) => {
-        setTimeout(() => {
-          set((state) => {
-            if (state.currentGuessIndex !== nextIdx) return {}
-            const newInput = [...state.currentInput]
-            newInput[pos] = char
-            const newGuesses = state.guesses.map((row, i) => {
-              if (i !== nextIdx) return row
-              const letters: Letter[] = newInput.map((ch) => ({
-                char: ch,
-                status: (ch ? 'filled' : 'empty') as LetterStatus,
-              }))
-              return { ...row, letters }
-            })
-            return { currentInput: newInput, guesses: newGuesses }
-          })
-        }, idx * 200)
-      })
+      animateConfirmedLetters(set, nextIdx, confirmed)
     }, actualFlipDone)
-  },
-
-  clearInput: () => {
-    const { phase, currentInput, currentGuessIndex, guesses, isValidating } = get()
-    if (phase !== 'playing' || isValidating) return
-
-    const newInput = currentInput.map((c, i) => i === 0 ? c : '')
-    if (newInput.every((c, i) => c === currentInput[i])) return
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-    set({ currentInput: newInput, guesses: updated })
   },
 
   setVoiceInput: (word: string) => {

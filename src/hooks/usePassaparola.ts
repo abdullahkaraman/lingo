@@ -1,9 +1,10 @@
 import { create } from 'zustand'
-import type { GuessRow, Letter, LetterStatus, WordLength } from '../game/types'
+import type { GuessRow, Letter, WordLength } from '../game/types'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
 import tdkData from '../data/tdk-valid.json'
+import { createInputActions, animateConfirmedLetters } from './sharedStoreActions'
 
 // ── Alphabet ─────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,8 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
   results: [],
   invalidCount: 0,
 
+  ...createInputActions(set, get),
+
   // ── startGame ──────────────────────────────────────────────────────────────
 
   startGame: (wordLength = DEFAULT_WORD_LENGTH) => {
@@ -186,74 +189,6 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
       results: [],
       invalidCount: 0,
     })
-  },
-
-  // ── Input ──────────────────────────────────────────────────────────────────
-
-  typeChar: (char: string) => {
-    const { phase, currentInput, currentGuessIndex, guesses } = get()
-    if (phase !== 'playing') return
-
-    const nextPos = currentInput.findIndex((c, i) => c === '' && i !== 0)
-    if (nextPos === -1) return
-
-    const newInput = [...currentInput]
-    newInput[nextPos] = normalize(char)
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-
-    set({ currentInput: newInput, guesses: updated, errorMessage: null })
-  },
-
-  deleteLast: () => {
-    const { phase, currentInput, currentGuessIndex, guesses } = get()
-    if (phase !== 'playing') return
-
-    let lastPos = -1
-    for (let i = currentInput.length - 1; i >= 0; i--) {
-      if (currentInput[i] !== '' && i !== 0) { lastPos = i; break }
-    }
-    if (lastPos === -1) return
-
-    const newInput = [...currentInput]
-    newInput[lastPos] = ''
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-
-    set({ currentInput: newInput, guesses: updated })
-  },
-
-  clearInput: () => {
-    const { phase, currentInput, currentGuessIndex, guesses } = get()
-    if (phase !== 'playing') return
-
-    const newInput = currentInput.map((c, i) => i === 0 ? c : '')
-    if (newInput.every((c, i) => c === currentInput[i])) return
-
-    const updated = guesses.map((row, idx) => {
-      if (idx !== currentGuessIndex) return row
-      const letters: Letter[] = newInput.map((ch) => ({
-        char: ch,
-        status: (ch ? 'filled' : 'empty') as Letter['status'],
-      }))
-      return { ...row, letters }
-    })
-
-    set({ currentInput: newInput, guesses: updated })
   },
 
   // ── submitGuess ────────────────────────────────────────────────────────────
@@ -390,28 +325,7 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
         currentInput: buildInputArray(wordLength, confirmed),
       })
 
-      const entries = Object.entries(confirmed)
-        .map(([k, v]) => [Number(k), v] as [number, string])
-        .sort((a, b) => a[0] - b[0])
-
-      entries.forEach(([pos, char], idx) => {
-        setTimeout(() => {
-          set((state) => {
-            if (state.phase !== 'playing' || state.currentGuessIndex !== nextIdx) return {}
-            const newInput = [...state.currentInput]
-            newInput[pos] = char
-            const newGuesses = state.guesses.map((row, i) => {
-              if (i !== nextIdx) return row
-              const letters: Letter[] = newInput.map((ch) => ({
-                char: ch,
-                status: (ch ? 'filled' : 'empty') as LetterStatus,
-              }))
-              return { ...row, letters }
-            })
-            return { currentInput: newInput, guesses: newGuesses }
-          })
-        }, idx * 200)
-      })
+      animateConfirmedLetters(set, nextIdx, confirmed)
     }, flipDone)
   },
 
