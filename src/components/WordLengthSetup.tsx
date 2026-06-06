@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { WordLength } from '../types/game'
+import type { WordLength } from '../game/types'
 
 interface Option {
   length: WordLength

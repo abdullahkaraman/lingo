@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GameState, Letter, LetterStatus, WordLength } from '../types/game'
+import type { GameState, Letter, LetterStatus, WordLength } from '../game/types'
 import { evaluateGuess } from '../utils/evaluateGuess'
 import { normalize } from '../utils/normalizeTurkish'
 import { isValidWord } from '../utils/dictionary'
