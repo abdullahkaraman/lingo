@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 interface GameHeaderProps {
   onRestart: (() => void) | null
 }
@@ -6,7 +8,7 @@ export function GameHeader({ onRestart }: GameHeaderProps) {
   return (
     <header className="w-full flex items-center justify-between py-3 border-b border-zinc-700/50 mb-2">
       <div className="w-10" /> {/* spacer */}
-      <a href="/" className="flex flex-col items-center gap-0.5 group">
+      <Link to="/" className="flex flex-col items-center gap-0.5 group">
         <h1
           className="text-4xl sm:text-5xl font-black tracking-[0.2em] text-transparent bg-clip-text
             bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400
@@ -16,7 +18,7 @@ export function GameHeader({ onRestart }: GameHeaderProps) {
           LİNGO
         </h1>
         <p className="text-zinc-500 text-[10px] tracking-widest uppercase">Kelime Tahmin Oyunu</p>
-      </a>
+      </Link>
       {onRestart ? (
         <button
           onClick={onRestart}

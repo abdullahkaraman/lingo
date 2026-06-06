@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { GameHeader } from '../GameHeader'
 import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
@@ -10,6 +11,7 @@ import { computeLetterStatuses } from '../../game/keyboard'
 
 
 export function PassaparolaApp() {
+  const navigate = useNavigate()
   const {
     phase, wordLength, queue, skipped, outcomes,
     targetWord, guesses, currentGuessIndex,
@@ -112,7 +114,7 @@ export function PassaparolaApp() {
               Yeniden Oyna
             </button>
             <button
-              onClick={() => { window.location.href = '/' }}
+              onClick={() => { navigate('/') }}
               className="w-full mt-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700
                 text-zinc-400 font-semibold text-sm active:scale-95 transition-all"
             >
@@ -136,7 +138,7 @@ export function PassaparolaApp() {
         className="w-full max-w-lg h-full flex flex-col px-3"
         onClick={() => { if (phase === 'playing') hiddenInputRef.current?.focus() }}
       >
-        <GameHeader onRestart={() => { window.location.href = '/' }} />
+        <GameHeader onRestart={() => { navigate('/') }} />
         {/* Hidden input moved to bottom, but we still need currentLetter here */}
 
         {/* Alphabet strip */}

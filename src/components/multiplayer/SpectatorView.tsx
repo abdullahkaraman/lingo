@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { GameBoard } from '../GameBoard'
 import { GameHeader } from '../GameHeader'
 import type { PublicState } from '../../game-engine/types'
@@ -13,6 +14,7 @@ const PHASE_LABEL: Record<string, string> = {
 }
 
 export function SpectatorView({ state }: Props) {
+  const navigate = useNavigate()
   const { phase, round, maxRounds, targetWord, wordLength, spectatorBoards, players, currentTurn } = state
   const boards = Object.values(spectatorBoards ?? {}).map((b, i) => ({
     ...b,
@@ -113,7 +115,7 @@ export function SpectatorView({ state }: Props) {
         {/* Footer */}
         <div className="px-4 pb-5 pt-3 border-t border-zinc-800 mt-3">
           <button
-            onClick={() => { window.location.href = '/' }}
+            onClick={() => { navigate('/') }}
             className="w-full py-2.5 rounded-xl bg-zinc-800 border border-zinc-700
               text-zinc-400 font-semibold text-sm active:scale-95 transition-all"
           >

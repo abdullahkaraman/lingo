@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PartySocket from 'partysocket'
 import { GameHeader } from '../GameHeader'
 
@@ -22,6 +23,7 @@ const PHASE_LABEL: Record<string, { text: string; classes: string }> = {
 }
 
 export function LobbyPage() {
+  const navigate = useNavigate()
   const [rooms, setRooms] = useState<RoomInfo[]>([])
   const [connected, setConnected] = useState(false)
 
@@ -47,7 +49,7 @@ export function LobbyPage() {
 
   function createRoom() {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
-    window.location.href = `?room=${id}`
+    navigate(`/room/${id}`)
   }
 
   return (
@@ -61,7 +63,7 @@ export function LobbyPage() {
         {/* Sub-header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
           <button
-            onClick={() => { window.location.href = '/' }}
+            onClick={() => navigate('/')}
             className="text-zinc-400 hover:text-white text-sm transition-colors active:scale-95"
           >
             ← Geri
@@ -93,7 +95,7 @@ export function LobbyPage() {
                 Katılmaya açık
               </div>
               {waitingRooms.map((r) => (
-                <RoomCard key={r.id} room={r} canJoin />
+                <RoomCard key={r.id} room={r} canJoin navigate={navigate} />
               ))}
             </>
           )}
@@ -104,7 +106,7 @@ export function LobbyPage() {
                 Oyun devam ediyor
               </div>
               {activeRooms.map((r) => (
-                <RoomCard key={r.id} room={r} canJoin={false} canWatch={r.allowSpectators} />
+                <RoomCard key={r.id} room={r} canJoin={false} canWatch={r.allowSpectators} navigate={navigate} />
               ))}
             </>
           )}
@@ -125,7 +127,7 @@ export function LobbyPage() {
   )
 }
 
-function RoomCard({ room, canJoin, canWatch = true }: { room: RoomInfo; canJoin: boolean; canWatch?: boolean }) {
+function RoomCard({ room, canJoin, canWatch = true, navigate }: { room: RoomInfo; canJoin: boolean; canWatch?: boolean; navigate: (path: string) => void }) {
   const code  = room.id.slice(0, 8).toUpperCase()
   const timer = room.timerSeconds > 0 ? `${room.timerSeconds}s` : 'Süresiz'
   const badge = PHASE_LABEL[room.phase] ?? { text: room.phase, classes: 'bg-zinc-700 text-zinc-400' }
@@ -155,14 +157,14 @@ function RoomCard({ room, canJoin, canWatch = true }: { room: RoomInfo; canJoin:
 
       {canJoin ? (
         <button
-          onClick={() => { window.location.href = `?room=${room.id}` }}
+          onClick={() => navigate(`/room/${room.id}`)}
           className="shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all bg-yellow-500 text-black"
         >
           Katıl
         </button>
       ) : canWatch ? (
         <button
-          onClick={() => { window.location.href = `?room=${room.id}` }}
+          onClick={() => navigate(`/room/${room.id}`)}
           className="shrink-0 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all bg-zinc-700 border border-zinc-600 text-zinc-300"
         >
           İzle

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { GameHeader } from '../GameHeader'
 import { MultiplayerEntry } from './MultiplayerEntry'
 import { MultiplayerLobby } from './MultiplayerLobby'
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function MultiplayerApp({ roomId }: Props) {
+  const navigate = useNavigate()
   const playerId = useRef(loadOrCreatePlayerId()).current
   const clientRef = useRef(new PartyKitClient())
   const client = clientRef.current
@@ -78,7 +80,7 @@ export function MultiplayerApp({ roomId }: Props) {
             <div className="text-lg font-bold mb-2">Bu oda özel</div>
             <div className="text-zinc-400 text-sm mb-6">Seyircilere kapalı bir oyun devam ediyor.</div>
             <button
-              onClick={() => { window.location.href = '/' }}
+              onClick={() => { navigate('/') }}
               className="px-6 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700
                 text-zinc-300 font-semibold text-sm active:scale-95 transition-all"
             >

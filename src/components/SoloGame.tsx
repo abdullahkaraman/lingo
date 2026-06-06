@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { GameHeader } from './GameHeader'
 import { GameBoard } from './GameBoard'
 import { Keyboard } from './Keyboard'
@@ -14,6 +15,7 @@ import { computeLetterStatuses } from '../game/keyboard'
 import type { WordLength } from '../game/types'
 
 export function SoloGame() {
+  const navigate = useNavigate()
   const {
     guesses, currentGuessIndex, wordLength, targetWord,
     phase, failReason, score, roundScore, errorMessage,
@@ -166,7 +168,7 @@ export function SoloGame() {
 
           <div className="mt-4 mb-6 flex flex-col gap-2 w-full max-w-xs mx-auto">
             <button
-              onClick={() => { window.location.href = '?passaparola' }}
+              onClick={() => navigate('/passaparola')}
               className="w-full px-5 py-3 rounded-xl border border-yellow-600/50 bg-yellow-900/20
                 text-yellow-300 text-sm font-bold hover:border-yellow-500 transition-colors
                 active:scale-95"
@@ -177,7 +179,7 @@ export function SoloGame() {
               <button
                 onClick={() => {
                   const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
-                  window.location.href = `?room=${id}`
+                  navigate(`/room/${id}`)
                 }}
                 className="flex-1 px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
                   text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
@@ -186,7 +188,7 @@ export function SoloGame() {
                 Oda Oluştur
               </button>
               <button
-                onClick={() => { window.location.href = '?lobby' }}
+                onClick={() => navigate('/lobby')}
                 className="flex-1 px-5 py-2.5 rounded-xl border border-zinc-600 bg-zinc-800
                   text-zinc-300 text-sm font-semibold hover:border-zinc-400 transition-colors
                   active:scale-95"

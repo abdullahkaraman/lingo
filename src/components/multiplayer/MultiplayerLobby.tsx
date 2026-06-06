@@ -20,7 +20,7 @@ export function MultiplayerLobby({ state, myId, roomId, onStart, onSetWordLength
   const players = Object.values(state.players)
   const canStart = isHost && players.length >= 2
 
-  const roomUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`
+  const roomUrl = `${window.location.origin}/room/${roomId}`
 
   function handleCopy() {
     void navigator.clipboard.writeText(roomUrl).then(() => {

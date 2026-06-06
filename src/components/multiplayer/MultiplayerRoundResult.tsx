@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { GameBoard } from '../GameBoard'
 import type { PublicState } from '../../game-engine/types'
 
@@ -113,13 +114,13 @@ export function MultiplayerRoundResult({ state, myId, onNextRound, onVoteRematch
               {opponentVotedRematch ? '🔥 Rakip rövanş istiyor — Kabul et!' : 'Rövanş İste'}
             </button>
           )}
-          <a
-            href={window.location.pathname}
+          <Link
+            to="/"
             className="w-full py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400
               font-semibold text-sm text-center active:scale-95 transition-all block"
           >
             Ana Sayfaya Dön
-          </a>
+          </Link>
         </div>
       ) : (
         <button

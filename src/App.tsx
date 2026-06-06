@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Routes, Route, useSearchParams, useParams, Navigate } from 'react-router-dom'
 import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
 import { LobbyPage } from './components/multiplayer/LobbyPage'
 import { PassaparolaApp } from './components/passaparola/PassaparolaApp'
@@ -6,31 +7,59 @@ import { SoloGame } from './components/SoloGame'
 
 declare const __APP_VERSION__: string
 
-export default function App() {
-  const params = new URLSearchParams(window.location.search)
-  const roomId = params.get('room')
+function LegacyRedirect() {
+  const [searchParams] = useSearchParams()
+  const roomId = searchParams.get('room')
+  
+  if (roomId) {
+    return <Navigate to={`/room/${roomId}`} replace />
+  }
+  if (searchParams.has('lobby')) {
+    return <Navigate to="/lobby" replace />
+  }
+  if (searchParams.has('passaparola')) {
+    return <Navigate to="/passaparola" replace />
+  }
+  
+  return <SoloGame />
+}
 
-  // ── Stamp build version into URL so local and phone can be compared ──────
+function MultiplayerWrapper() {
+  const { roomId } = useParams<{ roomId: string }>()
+  if (!roomId) return <Navigate to="/lobby" replace />
+  return <MultiplayerApp roomId={roomId} />
+}
+
+export default function App() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // ── Stamp build version into URL ──────
   useEffect(() => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('v', __APP_VERSION__)
-    history.replaceState(null, '', url.toString())
-  }, [])
+    if (searchParams.get('v') !== __APP_VERSION__) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('v', __APP_VERSION__)
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [searchParams, setSearchParams])
 
   return (
     <div
       className="fixed inset-0 overflow-hidden text-white flex flex-col items-center"
       style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #09090b 60%)' }}
     >
-      {roomId ? (
-        <MultiplayerApp roomId={roomId} />
-      ) : params.has('lobby') ? (
-        <LobbyPage />
-      ) : params.has('passaparola') ? (
-        <PassaparolaApp />
-      ) : (
-        <SoloGame />
-      )}
+      <Routes>
+        <Route path="/" element={<LegacyRedirect />} />
+        <Route path="/lobby" element={<LobbyPage />} />
+        <Route path="/passaparola" element={<PassaparolaApp />} />
+        <Route path="/room/:roomId" element={<MultiplayerWrapper />} />
+        {/* Fallback to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   )
 }
