@@ -8,7 +8,7 @@ import { createInputActions, animateConfirmedLetters } from './sharedStoreAction
 
 // ── Alphabet ─────────────────────────────────────────────────────────────────
 
-export const PASSAPAROLA_ALPHABET = [
+export const CHAIN_ALPHABET = [
   'A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'H', 'I', 'İ',
   'J', 'K', 'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş',
   'T', 'U', 'Ü', 'V', 'Y', 'Z',
@@ -24,7 +24,7 @@ const DEFAULT_WORD_LENGTH: WordLength = 5
 
 // ── Used-word tracking (separate key from regular game) ───────────────────────
 
-const usedKey = (len: WordLength) => `lingo_pp_used_${len}`
+const usedKey = (len: WordLength) => `lingo_chain_used_${len}`
 
 function loadUsed(len: WordLength): Set<string> {
   try {
@@ -60,7 +60,7 @@ function pickWordByLetter(letter: string, wordLength: WordLength): string {
   return candidates[Math.floor(Math.random() * candidates.length)]
 }
 
-// Board builder for Passaparola (can use shared helpers)
+// Board builder for Chain (can use shared helpers)
 function buildBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
   return buildInitialBoard(wordLength, firstLetter)
 }
@@ -69,8 +69,9 @@ function buildBoard(wordLength: WordLength, firstLetter: string): GuessRow[] {
 
 export type LetterOutcome = 'unseen' | 'current' | 'skipped' | 'solved'
 
-export type PassaparolaPhase =
+export type ChainPhase =
   | 'idle'           // not yet started
+  | 'setup'          // selecting word length
   | 'playing'        // actively guessing current letter
   | 'round_won'      // letter just solved (show result before advancing)
   | 'round_skipped'  // letter just passed or exhausted (show result before advancing)
@@ -86,8 +87,8 @@ export interface LetterResult {
   score: number
 }
 
-interface PassaparolaStore {
-  phase: PassaparolaPhase
+interface ChainStore {
+  phase: ChainPhase
   wordLength: WordLength
 
   // ── Queue ──────────────────────────────────────────────────────────────────
@@ -117,7 +118,8 @@ interface PassaparolaStore {
   invalidCount: number
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  startGame: (wordLength?: WordLength) => void
+  showSetup: () => void
+  startGame: (wordLength: WordLength) => void
   typeChar: (char: string) => void
   deleteLast: () => void
   clearInput: () => void
@@ -132,13 +134,13 @@ interface PassaparolaStore {
 
 function buildInitialOutcomes(): Record<string, LetterOutcome> {
   const o: Record<string, LetterOutcome> = {}
-  for (const l of PASSAPAROLA_ALPHABET) o[l] = 'unseen'
+  for (const l of CHAIN_ALPHABET) o[l] = 'unseen'
   return o
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-export const usePassaparola = create<PassaparolaStore>((set, get) => ({
+export const useChain = create<ChainStore>((set, get) => ({
   phase: 'idle',
   wordLength: DEFAULT_WORD_LENGTH,
   queue: [],
@@ -158,10 +160,14 @@ export const usePassaparola = create<PassaparolaStore>((set, get) => ({
 
   ...createInputActions(set, get),
 
+  // ── setup ──────────────────────────────────────────────────────────────────
+
+  showSetup: () => set({ phase: 'setup' }),
+
   // ── startGame ──────────────────────────────────────────────────────────────
 
-  startGame: (wordLength = DEFAULT_WORD_LENGTH) => {
-    const queue = [...PASSAPAROLA_ALPHABET]
+  startGame: (wordLength: WordLength) => {
+    const queue = [...CHAIN_ALPHABET]
     const firstLetter = queue[0]
     const targetWord = pickWordByLetter(firstLetter, wordLength)
     markUsed(wordLength, targetWord)

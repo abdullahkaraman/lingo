@@ -177,12 +177,12 @@ export function SoloGame() {
 
           <div className="mt-4 mb-6 flex flex-col gap-2 w-full max-w-xs mx-auto">
             <button
-              onClick={() => navigate('/passaparola')}
+              onClick={() => navigate('/zincir')}
               className="w-full px-5 py-3 rounded-xl border border-yellow-600/50 bg-yellow-900/20
                 text-yellow-300 text-sm font-bold hover:border-yellow-500 transition-colors
                 active:scale-95"
             >
-              🎯 Passaparola Modu
+              🎯 Zincir Modu
             </button>
             <div className="flex gap-2">
               <button

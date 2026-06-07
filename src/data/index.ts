@@ -2,7 +2,7 @@ import tdkData from './tdk-valid.json'
 
 /**
  * Frequency-sorted word pools keyed by length (4–7).
- * Used for word selection in solo, multiplayer, and passaparola modes.
+ * Used for word selection in solo, multiplayer, and zincir modes.
  */
 export const GAME_WORDS = (tdkData as unknown as { game: Record<number, string[]> }).game
 

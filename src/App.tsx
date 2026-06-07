@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, useSearchParams, useParams, Navigate } from 'react-router-dom'
 import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
 import { LobbyPage } from './components/multiplayer/LobbyPage'
-import { PassaparolaApp } from './components/passaparola/PassaparolaApp'
+import { ChainApp } from './components/chain/ChainApp'
 import { SoloGame } from './components/SoloGame'
 
 declare const __APP_VERSION__: string
@@ -17,8 +17,8 @@ function LegacyRedirect() {
   if (searchParams.has('lobby')) {
     return <Navigate to="/lobby" replace />
   }
-  if (searchParams.has('passaparola')) {
-    return <Navigate to="/passaparola" replace />
+  if (searchParams.has('passaparola') || searchParams.has('zincir')) {
+    return <Navigate to="/zincir" replace />
   }
   
   return <SoloGame />
@@ -43,7 +43,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LegacyRedirect />} />
         <Route path="/lobby" element={<LobbyPage />} />
-        <Route path="/passaparola" element={<PassaparolaApp />} />
+        <Route path="/zincir" element={<ChainApp />} />
         <Route path="/room/:roomId" element={<MultiplayerWrapper />} />
         {/* Fallback to home */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,5 @@
-import type { LetterOutcome } from '../../hooks/usePassaparola'
-import { PASSAPAROLA_ALPHABET } from '../../hooks/usePassaparola'
+import type { LetterOutcome } from '../../hooks/useChain'
+import { CHAIN_ALPHABET } from '../../hooks/useChain'
 
 interface Props {
   outcomes: Record<string, LetterOutcome>
@@ -16,7 +16,7 @@ export function AlphabetStrip({ outcomes }: Props) {
   return (
     <div className="w-full px-2 py-2">
       <div className="flex flex-wrap justify-center gap-1">
-        {PASSAPAROLA_ALPHABET.map((letter) => {
+        {CHAIN_ALPHABET.map((letter) => {
           const outcome = outcomes[letter] ?? 'unseen'
           return (
             <div

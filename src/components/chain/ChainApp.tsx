@@ -4,21 +4,20 @@ import { GameHeader } from '../GameHeader'
 import { GameBoard } from '../GameBoard'
 import { Keyboard } from '../Keyboard'
 import { AlphabetStrip } from './AlphabetStrip'
-import { usePassaparola, PASSAPAROLA_ALPHABET } from '../../hooks/usePassaparola'
+import { WordLengthSetup } from '../WordLengthSetup'
+import { useChain, CHAIN_ALPHABET } from '../../hooks/useChain'
 import { useTurkishKeyboardInput } from '../../hooks/useTurkishKeyboardInput'
 import { computeLetterStatuses } from '../../game/keyboard'
 
-
-
-export function PassaparolaApp() {
+export function ChainApp() {
   const navigate = useNavigate()
   const {
     phase, wordLength, queue, skipped, outcomes,
     targetWord, guesses, currentGuessIndex,
     score, roundScore, skipReason, errorMessage, isFlashingRed, results,
-    startGame, typeChar, deleteLast, clearInput, submitGuess,
+    showSetup, startGame, typeChar, deleteLast, clearInput, submitGuess,
     passLetter, advance, clearError, resetGame,
-  } = usePassaparola()
+  } = useChain()
 
   const [shaking, setShaking] = useState(false)
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -28,7 +27,7 @@ export function PassaparolaApp() {
 
   // ── Start on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (phase === 'idle') startGame()
+    if (phase === 'idle') showSetup()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { hiddenInputRef, handleNativeInput } = useTurkishKeyboardInput({
@@ -60,6 +59,21 @@ export function PassaparolaApp() {
     }, 600)
   }, [errorMessage, clearError])
 
+  // ── Word Length Selection ───────────────────────────────────────────────────
+  if (phase === 'setup') {
+    return (
+      <div
+        className="fixed inset-0 overflow-y-auto text-white flex flex-col items-center"
+        style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #09090b 60%)' }}
+      >
+        <WordLengthSetup
+          onSelect={(len) => { startGame(len) }}
+          onBack={() => navigate('/')}
+          showTimer={false}
+        />
+      </div>
+    )
+  }
 
   // ── Game over screen ─────────────────────────────────────────────────────────
   if (phase === 'game_over') {
@@ -76,7 +90,7 @@ export function PassaparolaApp() {
             <div className="text-4xl mb-1">🏆</div>
             <div className="text-2xl font-bold mb-1">Tebrikler!</div>
             <div className="text-zinc-400 text-sm mb-4">
-              {solvedCount} / {PASSAPAROLA_ALPHABET.length} harf çözüldü
+              {solvedCount} / {CHAIN_ALPHABET.length} harf çözüldü
             </div>
             <div className="text-4xl font-bold text-yellow-400">{score.toLocaleString()}</div>
             <div className="text-xs text-zinc-500 mt-1">puan</div>
@@ -84,7 +98,7 @@ export function PassaparolaApp() {
 
           {/* Results table */}
           <div className="px-4 flex flex-col gap-1.5">
-            {[...PASSAPAROLA_ALPHABET].map((letter) => {
+            {[...CHAIN_ALPHABET].map((letter) => {
               const r = results.find((x) => x.letter === letter)
               if (!r) return null
               return (
@@ -114,7 +128,7 @@ export function PassaparolaApp() {
 
           <div className="px-4 mt-6">
             <button
-              onClick={() => { resetGame(); startGame() }}
+              onClick={() => { resetGame(); showSetup() }}
               className="w-full py-3.5 rounded-xl bg-yellow-500 text-black font-bold text-lg
                 active:scale-95 transition-all"
             >
@@ -175,7 +189,7 @@ export function PassaparolaApp() {
             <div
               className="h-full bg-green-500 transition-all duration-500"
               style={{
-                width: `${(Object.values(outcomes).filter((o) => o === 'solved').length / PASSAPAROLA_ALPHABET.length) * 100}%`,
+                width: `${(Object.values(outcomes).filter((o) => o === 'solved').length / CHAIN_ALPHABET.length) * 100}%`,
               }}
             />
           </div>
