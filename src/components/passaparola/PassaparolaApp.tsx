@@ -24,6 +24,7 @@ export function PassaparolaApp() {
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentLetter = queue[0] ?? ''
+  const showResult = phase === 'round_won' || phase === 'round_skipped'
 
   // ── Start on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -34,12 +35,18 @@ export function PassaparolaApp() {
     onChar: typeChar,
     onDelete: deleteLast,
     onEnter: () => { submitGuess() },
-    onTab: passLetter,
+    onTab: () => {
+      if (showResult) {
+        advance()
+      } else {
+        passLetter()
+      }
+    },
     onInvalidKey: () => {
       setShaking(true)
       setTimeout(() => setShaking(false), 500)
     },
-    isActive: phase === 'playing',
+    isActive: phase === 'playing' || showResult,
   })
 
   // ── Shake on error ───────────────────────────────────────────────────────────
@@ -127,7 +134,7 @@ export function PassaparolaApp() {
   }
 
   // ── Round result overlay (won / skipped) ─────────────────────────────────────
-  const showResult = phase === 'round_won' || phase === 'round_skipped'
+
 
   return (
     <div

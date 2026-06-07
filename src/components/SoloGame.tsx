@@ -70,7 +70,12 @@ export function SoloGame() {
       setShaking(true)
       setTimeout(() => setShaking(false), 500)
     },
-    isActive: view === 'game' && phase === 'playing',
+    onTab: () => {
+      if (phase !== 'playing') {
+        startNewWord()
+      }
+    },
+    isActive: view === 'game',
     disabled: isValidating,
   })
 
