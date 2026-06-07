@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, useSearchParams, useParams, Navigate } from 'react-router-dom'
+import { Routes, Route, useSearchParams, useParams, Navigate, useLocation } from 'react-router-dom'
 import { MultiplayerApp } from './components/multiplayer/MultiplayerApp'
 import { LobbyPage } from './components/multiplayer/LobbyPage'
 import { PassaparolaApp } from './components/passaparola/PassaparolaApp'
@@ -32,20 +32,37 @@ function MultiplayerWrapper() {
 
 export default function App() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
 
-  // ── Stamp build version into URL ──────
+  // ── Stamp build version into URL (only on root) ──────
   useEffect(() => {
-    if (searchParams.get('v') !== __APP_VERSION__) {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          next.set('v', __APP_VERSION__)
-          return next
-        },
-        { replace: true },
-      )
+    const v = searchParams.get('v')
+    
+    if (location.pathname === '/') {
+      if (v !== __APP_VERSION__) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev)
+            next.set('v', __APP_VERSION__)
+            return next
+          },
+          { replace: true },
+        )
+      }
+    } else {
+      // Remove 'v' from other routes
+      if (v) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev)
+            next.delete('v')
+            return next
+          },
+          { replace: true },
+        )
+      }
     }
-  }, [searchParams, setSearchParams])
+  }, [location.pathname, searchParams, setSearchParams])
 
   return (
     <div
