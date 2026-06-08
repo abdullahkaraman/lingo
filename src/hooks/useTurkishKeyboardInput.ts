@@ -56,14 +56,14 @@ export function useTurkishKeyboardInput({
       // Tab: always grab it before the browser shifts focus.
       if (e.key === 'Tab') {
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
         onTab?.()
         return
       }
 
       if (e.key === 'Enter') {
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
         onEnter()
         return
       }
@@ -71,7 +71,7 @@ export function useTurkishKeyboardInput({
       if (e.key === 'Backspace' || e.key === 'Delete') {
         // preventDefault keeps the sentinel space intact in the hidden input.
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
         onDelete()
         return
       }
@@ -84,7 +84,7 @@ export function useTurkishKeyboardInput({
       if (e.altKey) {
         if (e.key.length === 1 && e.key !== ' ') {
           e.preventDefault()
-          e.stopPropagation()
+          e.stopImmediatePropagation()
           const upper = e.key.toLocaleUpperCase('tr-TR')
           if (VALID_LETTERS.has(upper)) {
             onChar(upper)
@@ -100,10 +100,11 @@ export function useTurkishKeyboardInput({
         const upper = e.key.toLocaleUpperCase('tr-TR')
         if (VALID_LETTERS.has(upper)) {
           // preventDefault stops the char from also going into the hidden input
-          // and firing a duplicate 'input' event. stopPropagation prevents
-          // browser extensions from intercepting game keystrokes.
+          // and firing a duplicate 'input' event. stopImmediatePropagation blocks
+          // any same-phase listeners that were registered after ours — the hidden
+          // input being focused handles the rest (extensions check activeElement).
           e.preventDefault()
-          e.stopPropagation()
+          e.stopImmediatePropagation()
           onChar(upper)
         } else {
           onInvalidKey?.()
@@ -159,6 +160,35 @@ export function useTurkishKeyboardInput({
       return () => clearTimeout(t)
     } else {
       hiddenInputRef.current?.blur()
+    }
+  }, [isActive, disabled])
+
+  // Keep the hidden input focused at all times during active gameplay.
+  // Most browser extensions check document.activeElement before firing their
+  // keyboard shortcuts — when an <input> has focus they skip their action,
+  // so this is the most reliable way to give Lingo priority over extensions.
+  useEffect(() => {
+    const el = hiddenInputRef.current
+    if (!el || !isActive || disabled) return
+
+    let refocusTimer: ReturnType<typeof setTimeout> | undefined
+
+    const handleBlur = () => {
+      clearTimeout(refocusTimer)
+      // Give buttons/links a moment to fire their click/pointerup handlers
+      // before we take focus back.
+      refocusTimer = setTimeout(() => {
+        const active = document.activeElement
+        // Don't steal focus from a real editable field the user opened.
+        if (active && isEditableTarget(active) && active !== el) return
+        el.focus()
+      }, 100)
+    }
+
+    el.addEventListener('blur', handleBlur)
+    return () => {
+      el.removeEventListener('blur', handleBlur)
+      clearTimeout(refocusTimer)
     }
   }, [isActive, disabled])
 
