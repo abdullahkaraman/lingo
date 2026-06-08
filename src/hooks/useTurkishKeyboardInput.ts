@@ -47,47 +47,70 @@ export function useTurkishKeyboardInput({
     const handler = (e: KeyboardEvent) => {
       if (disabled || !isActive) return
 
-      // Don't interfere with Ctrl/Cmd/Alt shortcuts
-      if (e.ctrlKey || e.metaKey || e.altKey) return
-
-      // Let other editable elements (inputs, textareas, contenteditable) handle their own keys.
-      // The hidden input is excluded from this check — it is handled in the block below.
+      // Let real editable fields own their keystrokes (but NOT our hidden game input).
       if (e.target !== hiddenInputRef.current && isEditableTarget(e.target)) return
 
-      // If the hidden input is focused, let onInput handle character insertion
-      // but we still catch functional keys like Enter/Backspace here if necessary.
-      // However, most mobile browsers don't fire keydown reliably for functional keys.
-      if (e.target === hiddenInputRef.current) {
-        // Just catch Tab even when focused if we want to override it
-        if (e.key === 'Tab' && onTab) {
-          e.preventDefault()
-          onTab()
-        }
+      // Block browser/OS shortcuts entirely — never intercept these.
+      if (e.ctrlKey || e.metaKey) return
+
+      // Tab: always grab it before the browser shifts focus.
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        e.stopPropagation()
+        onTab?.()
         return
       }
 
       if (e.key === 'Enter') {
         e.preventDefault()
+        e.stopPropagation()
         onEnter()
-      } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        onDelete()
-      } else if (e.key === 'Tab' && onTab) {
+        return
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        // preventDefault keeps the sentinel space intact in the hidden input.
         e.preventDefault()
-        onTab()
-      } else if (e.key.length === 1 && e.key !== ' ') {
-        // Printable, non-space character: validate against the Turkish alphabet.
-        // The length check excludes modifier-only keys (Shift, Ctrl, Alt, Meta),
-        // arrows, Escape, and function keys — all of which have e.key.length > 1
-        // and are silently ignored without firing onInvalidKey.
+        e.stopPropagation()
+        onDelete()
+        return
+      }
+
+      // Alt/Option key: the OS would otherwise compose the resulting character
+      // (e.g. Option+o → ø) into the hidden input, causing an 'input' event
+      // that bypasses our validation. preventDefault stops that composition;
+      // we still validate the key's character against the Turkish alphabet so
+      // users on Turkish Q/F layouts can type ş/ğ/etc. via their Alt combos.
+      if (e.altKey) {
+        if (e.key.length === 1 && e.key !== ' ') {
+          e.preventDefault()
+          e.stopPropagation()
+          const upper = e.key.toLocaleUpperCase('tr-TR')
+          if (VALID_LETTERS.has(upper)) {
+            onChar(upper)
+          } else {
+            onInvalidKey?.()
+          }
+        }
+        return
+      }
+
+      // Regular printable character.
+      if (e.key.length === 1 && e.key !== ' ') {
         const upper = e.key.toLocaleUpperCase('tr-TR')
         if (VALID_LETTERS.has(upper)) {
+          // preventDefault stops the char from also going into the hidden input
+          // and firing a duplicate 'input' event. stopPropagation prevents
+          // browser extensions from intercepting game keystrokes.
+          e.preventDefault()
+          e.stopPropagation()
           onChar(upper)
         } else {
           onInvalidKey?.()
         }
       }
-      // All other keys (arrows, Escape, F-keys, bare Shift/Ctrl/Alt/Meta, space)
-      // are silently ignored — no onInvalidKey, no preventDefault.
+      // All other keys (arrows, Escape, F-keys, space, bare modifiers) are
+      // silently ignored — no preventDefault, no onInvalidKey.
     }
 
     window.addEventListener('keydown', handler, { capture: true })
