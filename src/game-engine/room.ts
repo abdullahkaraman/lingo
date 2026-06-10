@@ -263,16 +263,19 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
 
   const opponentIds = Object.keys(state.players).filter((id) => id !== playerId)
 
-  // For spectators: expose only completed turns. The active row is local to the
-  // player until it is submitted, so spectators always trail live play by one row.
+  // For spectators: one-turn delay to prevent real-time cheating.
+  // While the round is live, we hide the most recently submitted guess from each
+  // board — spectators always see the state as it was one turn ago. Once the
+  // round ends every guess is revealed (no cheating advantage remains).
   let spectatorBoards: PublicState['spectatorBoards']
   if (isSpectator) {
     spectatorBoards = {}
     for (const [id, board] of Object.entries(state.boards)) {
       const submittedRows = board.rows.filter((row) => row.submitted)
+      const spectatorRows = roundDone ? submittedRows : submittedRows.slice(0, -1)
       spectatorBoards[id] = {
-        rows: submittedRows,
-        currentRowIndex: Math.max(0, submittedRows.length - 1),
+        rows: spectatorRows,
+        currentRowIndex: Math.max(0, spectatorRows.length - 1),
         status: board.status,
         player: players[id],
       }
