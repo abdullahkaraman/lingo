@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ConnectionStatus, MultiplayerClient } from '../multiplayer/client'
 import type { ServerEvent } from '../multiplayer/types'
-import type { PublicState, SpectatorBoard, WordLength } from '../game-engine/types'
+import type { PublicState, WordLength } from '../game-engine/types'
 
 export interface MultiplayerGameActions {
   sendGuess: (word: string) => void
@@ -19,31 +19,6 @@ export interface GameError {
   key: number // increments on every arrival so the same message re-triggers effects
 }
 
-function sanitizeSpectatorBoard(board: SpectatorBoard): SpectatorBoard {
-  const rows = board.rows.filter((row) => row.submitted)
-  return {
-    ...board,
-    rows,
-    currentRowIndex: rows.length - 1,
-  }
-}
-
-function sanitizeSpectatorState(state: PublicState): PublicState {
-  if (!state.isSpectator || !state.spectatorBoards) return state
-
-  const spectatorBoards = Object.fromEntries(
-    Object.entries(state.spectatorBoards).map(([id, board]) => [
-      id,
-      sanitizeSpectatorBoard(board),
-    ]),
-  )
-
-  return {
-    ...state,
-    spectatorBoards,
-  }
-}
-
 export function useMultiplayerGame(client: MultiplayerClient): {
   state: PublicState | null
   error: GameError | null
@@ -57,12 +32,12 @@ export function useMultiplayerGame(client: MultiplayerClient): {
   useEffect(() => {
     return client.subscribe((event: ServerEvent) => {
       if (event.type === 'state') {
-        setState(sanitizeSpectatorState(event.state))
+        setState(event.state)
         setError(null)
       } else if (event.type === 'error') {
         setError({ message: event.message, key: ++errorKey.current })
       } else if (event.type === 'error_state') {
-        setState(sanitizeSpectatorState(event.state))
+        setState(event.state)
         setError({ message: event.message, key: ++errorKey.current })
       }
     })

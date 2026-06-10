@@ -272,7 +272,7 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
       const submittedRows = board.rows.filter((row) => row.submitted)
       spectatorBoards[id] = {
         rows: submittedRows,
-        currentRowIndex: submittedRows.length - 1,
+        currentRowIndex: Math.max(0, submittedRows.length - 1),
         status: board.status,
         player: players[id],
       }
