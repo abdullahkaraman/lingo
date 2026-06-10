@@ -16,10 +16,15 @@ const PHASE_LABEL: Record<string, string> = {
 export function SpectatorView({ state }: Props) {
   const navigate = useNavigate()
   const { phase, round, maxRounds, targetWord, wordLength, spectatorBoards, players, currentTurn } = state
-  const boards = Object.values(spectatorBoards ?? {}).map((b, i) => ({
-    ...b,
-    label: `Oyuncu ${i + 1}`,
-  }))
+  const boards = Object.values(spectatorBoards ?? {}).map((b, i) => {
+    const rows = b.rows.filter((row) => row.submitted)
+    return {
+      ...b,
+      rows,
+      currentRowIndex: rows.length - 1,
+      label: `Oyuncu ${i + 1}`,
+    }
+  })
   const isOver = phase === 'round_over' || phase === 'game_over'
 
   const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score)
