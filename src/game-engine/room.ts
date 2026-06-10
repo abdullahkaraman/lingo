@@ -263,26 +263,16 @@ export function getPublicState(state: RoomState, playerId: string): PublicState 
 
   const opponentIds = Object.keys(state.players).filter((id) => id !== playerId)
 
-  // For spectators: expose both boards, masking only the currently-typed (unsubmitted) row
+  // For spectators: expose only completed turns. The active row is local to the
+  // player until it is submitted, so spectators always trail live play by one row.
   let spectatorBoards: PublicState['spectatorBoards']
   if (isSpectator) {
     spectatorBoards = {}
     for (const [id, board] of Object.entries(state.boards)) {
-      const maskedRows = roundDone
-        ? board.rows
-        : board.rows.map((row) => {
-            if (row.submitted) return row
-            return {
-              letters: Array.from({ length: state.wordLength }, (_, j) => ({
-                char: j === 0 ? state.targetWord[0] : '',
-                status: (j === 0 ? 'correct' : 'empty') as import('./types').LetterStatus,
-              })),
-              submitted: false,
-            }
-          })
+      const submittedRows = board.rows.filter((row) => row.submitted)
       spectatorBoards[id] = {
-        rows: maskedRows,
-        currentRowIndex: board.currentRowIndex,
+        rows: submittedRows,
+        currentRowIndex: submittedRows.length - 1,
         status: board.status,
         player: players[id],
       }

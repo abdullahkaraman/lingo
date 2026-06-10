@@ -53,7 +53,7 @@ export interface OpponentView {
   rows?: GuessRow[] // revealed only after round_over / game_over
 }
 
-// Full board info sent to spectators (both players' boards always visible)
+// Submitted board rows sent to spectators; active and future rows stay hidden.
 export interface SpectatorBoard {
   rows: GuessRow[]
   currentRowIndex: number
