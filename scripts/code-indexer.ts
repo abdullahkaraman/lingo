@@ -30,8 +30,9 @@ const IGNORED_DIRS = new Set([
   '.code-index',
 ])
 
-type IndexedLanguage = 'typescript' | 'json'
+type IndexedLanguage = 'typescript' | 'json' | 'markdown'
 type ChunkType =
+  | 'summary'
   | 'function'
   | 'component'
   | 'hook'
@@ -60,6 +61,7 @@ interface CodeChunk {
   symbolName: string
   chunkType: ChunkType
   language: IndexedLanguage
+  imports?: string[]
 }
 
 interface LanceCodeRecord {
@@ -73,6 +75,7 @@ interface LanceCodeRecord {
   end_line: number
   symbol_name: string
   chunk_type: ChunkType
+  imports?: string
   content: string
 }
 
@@ -85,6 +88,7 @@ export interface CodeSearchResult {
   chunk_index: number
   symbol_name: string
   chunk_type: ChunkType
+  imports: string[]
   content: string
 }
 
@@ -103,7 +107,7 @@ function isGeneratedFile(filePath: string, content?: string): boolean {
   if (
     normalized.includes('/generated/') ||
     normalized.includes('/__generated__/') ||
-    /\.(generated|gen)\.(ts|tsx|json)$/.test(basename) ||
+    /\.(generated|gen)\.(ts|tsx|json|md|mdx)$/.test(basename) ||
     basename.endsWith('.d.ts')
   ) {
     return true
@@ -141,7 +145,7 @@ async function scanDirectory(dir: string): Promise<string[]> {
       }
 
       if (!entry.isFile()) return []
-      if (!/\.(ts|tsx|json)$/.test(entry.name)) return []
+      if (!/\.(ts|tsx|json|md|mdx)$/.test(entry.name)) return []
       if (isGeneratedFile(fullPath)) return []
       return [fullPath]
     }),
@@ -168,6 +172,12 @@ function lineOf(source: ts.SourceFile, position: number): number {
 
 function nodeText(source: ts.SourceFile, node: ts.Node): string {
   return source.text.slice(node.getFullStart(), node.getEnd()).trim()
+}
+
+function collectImports(source: ts.SourceFile): string[] {
+  return source.statements
+    .filter(ts.isImportDeclaration)
+    .map((statement) => statement.getText(source).replace(/\s+/g, ' ').trim())
 }
 
 function nameOf(name: ts.PropertyName | ts.BindingName | undefined): string {
@@ -215,6 +225,7 @@ function addChunk(
   node: ts.Node,
   symbolName: string,
   chunkType: ChunkType,
+  imports: string[],
 ): void {
   const content = nodeText(source, node)
   if (!content) return
@@ -226,6 +237,7 @@ function addChunk(
     symbolName,
     chunkType,
     language: 'typescript',
+    imports,
   })
 }
 
@@ -245,13 +257,14 @@ function collectObjectMethodChunks(
   source: ts.SourceFile,
   root: ts.Node,
   parentName: string,
+  imports: string[],
 ): void {
   function visit(node: ts.Node): void {
     if (ts.isObjectLiteralExpression(node)) {
       for (const property of node.properties) {
         if (!hasFunctionLikeValue(property)) continue
         const propertyName = nameOf(property.name)
-        addChunk(chunks, source, property, objectMethodName(parentName, propertyName), 'object_method')
+        addChunk(chunks, source, property, objectMethodName(parentName, propertyName), 'object_method', imports)
       }
     }
 
@@ -264,21 +277,22 @@ function collectObjectMethodChunks(
 function chunkTypeScriptFile(filePath: string, content: string): CodeChunk[] {
   const kind = filePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, kind)
+  const imports = collectImports(source)
   const chunks: CodeChunk[] = []
   const coveredStatements = new Set<ts.Statement>()
 
   for (const statement of source.statements) {
     if (ts.isFunctionDeclaration(statement)) {
       const symbolName = nameOf(statement.name)
-      addChunk(chunks, source, statement, symbolName, classifyFunctionLike(symbolName, statement.getText()))
-      collectObjectMethodChunks(chunks, source, statement, symbolName)
+      addChunk(chunks, source, statement, symbolName, classifyFunctionLike(symbolName, statement.getText()), imports)
+      collectObjectMethodChunks(chunks, source, statement, symbolName, imports)
       coveredStatements.add(statement)
       continue
     }
 
     if (ts.isClassDeclaration(statement)) {
       const symbolName = nameOf(statement.name)
-      addChunk(chunks, source, statement, symbolName, 'class')
+      addChunk(chunks, source, statement, symbolName, 'class', imports)
       coveredStatements.add(statement)
       continue
     }
@@ -289,7 +303,7 @@ function chunkTypeScriptFile(filePath: string, content: string): CodeChunk[] {
       ts.isEnumDeclaration(statement)
     ) {
       const symbolName = nameOf(statement.name)
-      addChunk(chunks, source, statement, symbolName, 'type')
+      addChunk(chunks, source, statement, symbolName, 'type', imports)
       coveredStatements.add(statement)
       continue
     }
@@ -297,9 +311,9 @@ function chunkTypeScriptFile(filePath: string, content: string): CodeChunk[] {
     if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         const symbolName = nameOf(declaration.name)
-        addChunk(chunks, source, statement, symbolName, classifyVariable(statement, declaration))
+        addChunk(chunks, source, statement, symbolName, classifyVariable(statement, declaration), imports)
         if (declaration.initializer) {
-          collectObjectMethodChunks(chunks, source, declaration.initializer, symbolName)
+          collectObjectMethodChunks(chunks, source, declaration.initializer, symbolName, imports)
         }
       }
       coveredStatements.add(statement)
@@ -312,7 +326,7 @@ function chunkTypeScriptFile(filePath: string, content: string): CodeChunk[] {
   for (const statement of source.statements) {
     if (coveredStatements.has(statement)) {
       if (pendingStart !== null && pendingEnd !== null) {
-        addLooseChunk(chunks, source, pendingStart, pendingEnd)
+        addLooseChunk(chunks, source, pendingStart, pendingEnd, imports)
       }
       pendingStart = null
       pendingEnd = null
@@ -324,13 +338,13 @@ function chunkTypeScriptFile(filePath: string, content: string): CodeChunk[] {
   }
 
   if (pendingStart !== null && pendingEnd !== null) {
-    addLooseChunk(chunks, source, pendingStart, pendingEnd)
+    addLooseChunk(chunks, source, pendingStart, pendingEnd, imports)
   }
 
   return chunks.flatMap(splitLargeChunk)
 }
 
-function addLooseChunk(chunks: CodeChunk[], source: ts.SourceFile, start: number, end: number): void {
+function addLooseChunk(chunks: CodeChunk[], source: ts.SourceFile, start: number, end: number, imports: string[]): void {
   const content = source.text.slice(start, end).trim()
   if (!content) return
   chunks.push({
@@ -340,6 +354,7 @@ function addLooseChunk(chunks: CodeChunk[], source: ts.SourceFile, start: number
     symbolName: '(module)',
     chunkType: 'file',
     language: 'typescript',
+    imports,
   })
 }
 
@@ -472,9 +487,92 @@ function lineFromOffset(content: string, offset: number): number {
   return content.slice(0, offset).split(/\r?\n/).length
 }
 
+function chunkMarkdownFile(filePath: string, content: string): CodeChunk[] {
+  const lines = content.split(/\r?\n/)
+  const chunks: CodeChunk[] = []
+  let start = 0
+
+  for (let i = 1; i < lines.length; i += 1) {
+    if (/^#{1,3}\s+/.test(lines[i])) {
+      const block = lines.slice(start, i).join('\n').trim()
+      if (block) {
+        chunks.push({
+          content: block,
+          startLine: start + 1,
+          endLine: i,
+          symbolName: headingName(lines[start]) || path.basename(filePath),
+          chunkType: 'file',
+          language: 'markdown',
+        })
+      }
+      start = i
+    }
+  }
+
+  const finalBlock = lines.slice(start).join('\n').trim()
+  if (finalBlock) {
+    chunks.push({
+      content: finalBlock,
+      startLine: start + 1,
+      endLine: lines.length,
+      symbolName: headingName(lines[start]) || path.basename(filePath),
+      chunkType: 'file',
+      language: 'markdown',
+    })
+  }
+
+  return chunks.flatMap(splitLargeChunk)
+}
+
+function headingName(line: string | undefined): string | null {
+  const match = line?.match(/^#{1,6}\s+(.+)$/)
+  return match?.[1]?.trim() ?? null
+}
+
+function inferFileSummary(filePath: string, chunks: CodeChunk[]): string {
+  const projectPath = toProjectPath(filePath)
+  const symbols = chunks
+    .filter((chunk) => chunk.chunkType !== 'summary')
+    .map((chunk) => chunk.symbolName)
+    .filter((name) => name && name !== '(module)')
+    .slice(0, 12)
+  const types = [...new Set(chunks.map((chunk) => chunk.chunkType).filter((type) => type !== 'summary'))]
+  const hints = projectPath
+    .replace(/\.(tsx?|json|mdx?)$/, '')
+    .split(/[\/_.-]+/)
+    .filter(Boolean)
+    .slice(-5)
+
+  return [
+    `File summary for ${projectPath}.`,
+    hints.length > 0 ? `Path context: ${hints.join(', ')}.` : '',
+    types.length > 0 ? `Contains ${types.join(', ')} chunks.` : '',
+    symbols.length > 0 ? `Key symbols: ${symbols.join(', ')}.` : '',
+  ].filter(Boolean).join(' ')
+}
+
+function addFileSummaryChunk(filePath: string, chunks: CodeChunk[], content: string): CodeChunk[] {
+  const summary: CodeChunk = {
+    content: inferFileSummary(filePath, chunks),
+    startLine: 1,
+    endLine: Math.max(1, lineCount(content)),
+    symbolName: '(file_summary)',
+    chunkType: 'summary',
+    language: filePath.endsWith('.json') ? 'json' : /\.(md|mdx)$/.test(filePath) ? 'markdown' : 'typescript',
+    imports: chunks.find((chunk) => chunk.imports?.length)?.imports,
+  }
+
+  return [summary, ...chunks]
+}
+
 function chunkFile(filePath: string, content: string): CodeChunk[] {
-  if (filePath.endsWith('.json')) return chunkJsonFile(filePath, content)
-  return chunkTypeScriptFile(filePath, content)
+  const chunks = filePath.endsWith('.json')
+    ? chunkJsonFile(filePath, content)
+    : /\.(md|mdx)$/.test(filePath)
+    ? chunkMarkdownFile(filePath, content)
+    : chunkTypeScriptFile(filePath, content)
+
+  return addFileSummaryChunk(filePath, chunks, content)
 }
 
 async function readJson<T>(filePath: string, fallback: T): Promise<T> {
@@ -613,6 +711,7 @@ export async function indexCodebase(): Promise<void> {
         end_line: chunk.endLine,
         symbol_name: chunk.symbolName,
         chunk_type: chunk.chunkType,
+        imports: chunk.imports?.join('\n') ?? '',
         content: chunk.content,
       })
     }
@@ -654,6 +753,7 @@ function keywordScore(row: Record<string, unknown>, query: string, identifierMod
   const needle = query.toLowerCase()
   const terms = needle.split(/\s+/).filter(Boolean)
   const symbol = String(row.symbol_name ?? '').toLowerCase()
+  const imports = String(row.imports ?? '').toLowerCase()
   const content = String(row.content ?? '').toLowerCase()
   const filePath = String(row.file_path ?? '').toLowerCase()
 
@@ -661,24 +761,49 @@ function keywordScore(row: Record<string, unknown>, query: string, identifierMod
   if (symbol === needle) score += 100
   if (symbol.includes(needle)) score += 60
   if (filePath.includes(needle)) score += 35
+  if (imports.includes(needle)) score += 25
   if (content.includes(needle)) score += identifierMode ? 45 : 20
 
   for (const term of terms) {
     if (term.length < 2) continue
     if (symbol.includes(term)) score += 12
     if (filePath.includes(term)) score += 8
+    if (imports.includes(term)) score += 6
     if (content.includes(term)) score += 4
   }
 
   return score
 }
 
+function calculateScore(row: Record<string, unknown>, query: string, baseScore: number): number {
+  const symbol = String(row.symbol_name ?? '')
+  const chunkType = String(row.chunk_type ?? '')
+  const content = String(row.content ?? '')
+  let score = baseScore
+
+  if (symbol === query) score += 10_000
+
+  if (['function', 'component', 'type', 'interface', 'hook', 'object_method'].includes(chunkType)) {
+    score += 250
+  }
+
+  const nonEmptyLines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const importLines = nonEmptyLines.filter((line) => line.startsWith('import ') || line.startsWith('export {'))
+  const mostlyImports = nonEmptyLines.length > 0 && importLines.length / nonEmptyLines.length >= 0.6
+
+  if (chunkType === 'file' || chunkType === 'module' || mostlyImports) {
+    score -= 300
+  }
+
+  return score
+}
+
 async function keywordSearch(table: any, query: string, limit: number): Promise<CodeSearchResult[]> {
-  const rows = (await table.toArray()) as Record<string, unknown>[]
+  const rows = (await table.toArrow()).toArray() as Record<string, unknown>[]
   const identifierMode = looksLikeIdentifierQuery(query)
 
   return rows
-    .map((row) => ({ row, score: keywordScore(row, query, identifierMode) }))
+    .map((row) => ({ row, score: calculateScore(row, query, keywordScore(row, query, identifierMode)) }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, identifierMode ? limit : Math.min(3, limit))
@@ -692,8 +817,9 @@ async function vectorSearch(table: any, query: string, limit: number): Promise<C
   return rows
     .map((row) => {
       const distance = typeof row._distance === 'number' ? row._distance : 0
-      return rowToSearchResult(row, 'vector', distance)
+      return rowToSearchResult(row, 'vector', calculateScore(row, query, 1_000 - distance))
     })
+    .sort((a, b) => b.score - a.score)
     .slice(0, limit)
 }
 
@@ -715,6 +841,7 @@ function rowToSearchResult(
     chunk_index: Number(row.chunk_index),
     symbol_name: String(row.symbol_name ?? '(unknown)'),
     chunk_type: String(row.chunk_type ?? 'file') as ChunkType,
+    imports: String(row.imports ?? '').split('\n').filter(Boolean),
     content: String(row.content),
   }
 }
