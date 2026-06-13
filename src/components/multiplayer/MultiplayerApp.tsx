@@ -6,7 +6,7 @@ import { MultiplayerLobby } from './MultiplayerLobby'
 import { MultiplayerGame } from './MultiplayerGame'
 import { MultiplayerRoundResult } from './MultiplayerRoundResult'
 import { SpectatorView } from './SpectatorView'
-import { PartyKitClient } from '../../multiplayer/partykit-client'
+import { GoWebSocketClient } from '../../multiplayer/socket-client'
 import { useMultiplayerGame } from '../../hooks/useMultiplayerGame'
 
 function loadOrCreatePlayerId(): string {
@@ -25,7 +25,7 @@ interface Props {
 export function MultiplayerApp({ roomId }: Props) {
   const navigate = useNavigate()
   const [playerId] = useState(() => loadOrCreatePlayerId())
-  const clientRef = useRef(new PartyKitClient())
+  const clientRef = useRef(new GoWebSocketClient())
   const client = clientRef.current
 
   const { state, error, connectionStatus, startGame, nextRound, setWordLength, setTimer, voteRematch, toggleSpectators } = useMultiplayerGame(client)
@@ -46,8 +46,11 @@ export function MultiplayerApp({ roomId }: Props) {
     const savedName = localStorage.getItem('lingo_player_name') ?? ''
 
     if (state.players[playerId]) {
-      // Server already reconnected us in onConnect — just sync the name.
-      setPlayerName(state.players[playerId].name)
+      // The Go backend keeps websocket role on the connection, so reconnect as a player
+      // when this browser's persisted player id is already part of the room.
+      const name = state.players[playerId].name || savedName
+      client.send({ type: 'join', name })
+      setPlayerName(name)
       joinedRef.current = true
     } else if (state.phase === 'waiting' && savedName) {
       // Waiting room + saved name → auto-join.

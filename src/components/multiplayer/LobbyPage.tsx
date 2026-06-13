@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PartySocket from 'partysocket'
 import { GameHeader } from '../GameHeader'
+import { API_URL } from '../../config/backend'
 
 interface RoomInfo {
   id: string
@@ -13,8 +13,6 @@ interface RoomInfo {
   allowSpectators: boolean
   updatedAt: number
 }
-
-const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST ?? 'localhost:1999'
 
 const PHASE_LABEL: Record<string, { text: string; classes: string }> = {
   waiting:    { text: 'Bekleniyor',         classes: 'bg-green-900/50 text-green-400' },
@@ -28,20 +26,29 @@ export function LobbyPage() {
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    const socket = new PartySocket({
-      host: PARTYKIT_HOST,
-      party: 'lobby',
-      room: 'main',
-    })
-    socket.addEventListener('open', () => setConnected(true))
-    socket.addEventListener('close', () => setConnected(false))
-    socket.addEventListener('message', (evt: MessageEvent<string>) => {
+    let cancelled = false
+
+    async function fetchRooms() {
       try {
-        const msg = JSON.parse(evt.data) as { type: 'rooms'; rooms: RoomInfo[] }
-        if (msg.type === 'rooms') setRooms(msg.rooms)
-      } catch {}
-    })
-    return () => socket.close()
+        const response = await fetch(`${API_URL}/rooms`)
+        if (!response.ok) throw new Error(`rooms request failed: ${response.status}`)
+        const data = await response.json() as { rooms?: RoomInfo[] }
+        if (!cancelled) {
+          setRooms(data.rooms ?? [])
+          setConnected(true)
+        }
+      } catch {
+        if (!cancelled) setConnected(false)
+      }
+    }
+
+    void fetchRooms()
+    const interval = window.setInterval(fetchRooms, 5000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
   }, [])
 
   const waitingRooms = rooms.filter((r) => r.phase === 'waiting')

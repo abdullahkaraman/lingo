@@ -39,6 +39,8 @@ export function useMultiplayerGame(client: MultiplayerClient): {
       } else if (event.type === 'error_state') {
         setState(event.state)
         setError({ message: event.message, key: ++errorKey.current })
+      } else if (event.type === 'joined' || event.type === 'pong') {
+        // Transport-level acknowledgements do not affect UI state.
       }
     })
   }, [client])
