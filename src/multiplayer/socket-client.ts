@@ -1,14 +1,10 @@
 import type { ConnectionStatus, MultiplayerClient } from './client'
 import type { ClientEvent, ServerEvent } from './types'
 
-const isProd = window.location.host.includes('vercel.app');
-
-const WS_URL = isProd
-  ? `wss://${window.location.host}/api-proxy/ws`
-  : `ws://localhost:8080/ws`;
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
 
 function roomSocketUrl(roomId: string, playerId: string, playerName: string, role: 'player' | 'spectator') {
-  const url = new URL(WS_URL)
+  const url = new URL(WS_BASE_URL)
 
   if (window.location.protocol === 'https:') {
     url.protocol = 'wss:';
