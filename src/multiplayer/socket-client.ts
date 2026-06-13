@@ -1,7 +1,7 @@
 import type { ConnectionStatus, MultiplayerClient } from './client'
 import type { ClientEvent, ServerEvent } from './types'
 
-const isProd = process.argv.includes('production') || window.location.host.includes('vercel.app');
+const isProd = window.location.host.includes('vercel.app');
 
 const WS_URL = isProd
   ? `wss://${window.location.host}/api-proxy/ws`
