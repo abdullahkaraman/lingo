@@ -1,9 +1,19 @@
 import type { ConnectionStatus, MultiplayerClient } from './client'
 import type { ClientEvent, ServerEvent } from './types'
-import { WS_URL } from '../config/backend'
+
+const isProd = process.argv.includes('production') || window.location.host.includes('vercel.app');
+
+const WS_URL = isProd
+  ? `wss://${window.location.host}/api-proxy/ws`
+  : `ws://localhost:8080/ws`;
 
 function roomSocketUrl(roomId: string, playerId: string, playerName: string, role: 'player' | 'spectator') {
   const url = new URL(WS_URL)
+
+  if (window.location.protocol === 'https:') {
+    url.protocol = 'wss:';
+  }
+
   url.searchParams.set('roomCode', roomId)
   url.searchParams.set('playerId', playerId)
   url.searchParams.set('role', role)
